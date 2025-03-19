@@ -60,7 +60,7 @@ const PostList: React.FC<PostListProps> = ({ title = 'Latest Posts' }) => {
         fetchPosts();
     }, [page, categorySlug, tagSlug, searchQuery]);
 
-    const handlePageChange = (event: React.ChangeEvent<unknown>, value: number) => {
+    const handlePageChange = (_: React.ChangeEvent<unknown>, value: number) => {
         setPage(value);
         // Scroll to top when changing pages
         window.scrollTo({ top: 0, behavior: 'smooth' });

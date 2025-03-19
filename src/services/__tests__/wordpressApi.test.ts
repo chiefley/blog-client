@@ -69,7 +69,7 @@ describe('WordPress API Service', () => {
 
     it('applies filtering parameters correctly', async () => {
         // Spy on fetch to check the URL parameters
-        const fetchSpy = vi.spyOn(global, 'fetch')
+        const fetchSpy = vi.spyOn(window, 'fetch')
 
         await getPosts({
             page: 2,
