@@ -1,87 +1,108 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { Link as RouterLink } from 'react-router-dom';
 import {
     Typography,
     Paper,
     Box,
     Button,
-    Card,
-    CardContent,
-    CardActions,
-    Divider
+    CardMedia
 } from '@mui/material';
+import PostList from '../components/posts/PostList';
+import { getPosts, WordPressPost } from '../services/wordpressApi';
 
 const Home: React.FC = () => {
-    const [clickCount, setClickCount] = React.useState(0);
+    const [featuredPost, setFeaturedPost] = useState<WordPressPost | null>(null);
+    const [loading, setLoading] = useState(true);
 
-    const handleClick = () => {
-        setClickCount(prevCount => prevCount + 1);
-    };
+    // Fetch a featured post when component mounts
+    useEffect(() => {
+        const fetchFeaturedPost = async () => {
+            try {
+                // Get the most recent post as featured post
+                const result = await getPosts({ perPage: 1 });
+                if (result.posts && result.posts.length > 0) {
+                    setFeaturedPost(result.posts[0]);
+                }
+            } catch (error) {
+                console.error('Error fetching featured post:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchFeaturedPost();
+    }, []);
 
     return (
         <Box sx={{ width: '100%' }}>
-            {/* Hero section */}
-            <Paper
-                elevation={3}
-                sx={{
-                    p: 4,
-                    mb: 4,
-                    borderRadius: 2,
-                    background: 'linear-gradient(45deg, #1976d2 30%, #42a5f5 90%)',
-                    color: 'white'
-                }}
-            >
-                <Typography variant="h3" component="h1" gutterBottom>
-                    Welcome to XBlog
-                </Typography>
-                <Typography variant="h6">
-                    A Modern React Blog with WordPress Backend
-                </Typography>
-            </Paper>
+            {/* Hero section with featured post */}
+            {featuredPost && (
+                <Paper
+                    elevation={0}
+                    sx={{
+                        mb: 4,
+                        borderRadius: 2,
+                        overflow: 'hidden',
+                        position: 'relative',
+                        height: 300
+                    }}
+                >
+                    {/* Featured image */}
+                    <CardMedia
+                        component="img"
+                        image={featuredPost._embedded?.['wp:featuredmedia']?.[0]?.source_url || '/placeholder.jpg'}
+                        alt={featuredPost.title.rendered}
+                        sx={{
+                            height: '100%',
+                            width: '100%',
+                            objectFit: 'cover'
+                        }}
+                    />
 
-            {/* Test card to verify Material UI styling */}
-            <Card sx={{ mb: 4 }}>
-                <CardContent>
-                    <Typography variant="h5" component="h2" gutterBottom>
-                        Hello World!
-                    </Typography>
-                    <Typography variant="body1">
-                        This is a simple test page to verify that your React setup with Material UI
-                        is working correctly. You've successfully created your first page component.
-                    </Typography>
-                    <Box sx={{ my: 2 }}>
-                        <Typography variant="body2" color="text.secondary">
-                            From here, you can:
-                        </Typography>
-                        <ul>
-                            <li>Create more components in the src/components directory</li>
-                            <li>Set up WordPress API integration using the service you've already created</li>
-                            <li>Implement routing to different pages</li>
-                        </ul>
-                    </Box>
-                    <Divider sx={{ my: 2 }} />
-                    <Typography variant="body1">
-                        Button click count: {clickCount}
-                    </Typography>
-                </CardContent>
-                <CardActions>
-                    <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={handleClick}
+                    {/* Overlay gradient */}
+                    <Box
+                        sx={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.3) 60%, rgba(0,0,0,0) 100%)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'flex-end',
+                            p: 3
+                        }}
                     >
-                        Click Me
-                    </Button>
-                </CardActions>
-            </Card>
+                        <Typography
+                            variant="overline"
+                            sx={{ color: 'white', fontWeight: 'bold' }}
+                        >
+                            Featured Post
+                        </Typography>
 
-            {/* Debug info section */}
-            <Paper elevation={1} sx={{ p: 2, bgcolor: '#f5f5f5' }}>
-                <Typography variant="overline">DEBUG INFO</Typography>
-                <Typography variant="body2">
-                    React and Material UI are correctly installed and working.
-                    Theme is properly applied with blue primary color.
-                </Typography>
-            </Paper>
+                        <Typography
+                            variant="h4"
+                            component="h1"
+                            sx={{ color: 'white', mb: 1 }}
+                            dangerouslySetInnerHTML={{ __html: featuredPost.title.rendered }}
+                        />
+
+                        <Button
+                            component={RouterLink}
+                            to={`/post/${featuredPost.slug}`}
+                            variant="outlined"
+                            color="inherit"
+                            sx={{ alignSelf: 'flex-start', color: 'white', borderColor: 'white' }}
+                        >
+                            Read Post
+                        </Button>
+                    </Box>
+                </Paper>
+            )}
+
+            {/* Post list */}
+            <PostList />
         </Box>
     );
 };
