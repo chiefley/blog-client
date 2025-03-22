@@ -1,0 +1,98 @@
+# Setting Up a WordPress API User for JWT Authentication
+
+## Overview
+
+This guide explains how to create a dedicated WordPress user for API access with appropriate permissions.
+
+## Step 1: Create a New User in WordPress
+
+1. Log in to your WordPress admin panel (https://wpcms.thechief.com/wp-admin/)
+2. Go to **Users** > **Add New**
+3. Fill in the following details:
+   - **Username**: `api_user` (or any name you prefer)
+   - **Email**: Use a valid email address
+   - **Password**: Generate a strong password
+   - **Role**: Set to "Subscriber" (we'll customize permissions later)
+4. Click **Add New User**
+
+## Step 2: Install and Configure User Role Editor Plugin
+
+For fine-grained permission control:
+
+1. Go to **Plugins** > **Add New**
+2. Search for "User Role Editor"
+3. Install and activate the plugin
+4. Go to **Users** > **User Role Editor**
+
+## Step 3: Create a Custom API User Role
+
+1. In User Role Editor, click **Add Role**
+2. Name it "API User" or similar
+3. Clone capabilities from "Subscriber"
+4. Click **Add Role**
+
+## Step 4: Customize API User Permissions
+
+1. Edit the new role you created
+2. Enable only the following capabilities:
+   - `read` (basic reading capability)
+   - `read_posts` (ability to read posts)
+   - `read_private_posts` (if you want the API to access private posts)
+
+## Step 5: Assign the Custom Role to Your API User
+
+1. Go to **Users** > **All Users**
+2. Find your API user and edit their profile
+3. Change their role to your custom API User role
+4. Click **Update User**
+
+## Step 6: Configure JWT Authentication Plugin
+
+Ensure the JWT Authentication for WP-API plugin is properly configured:
+
+1. Modify your `.htaccess` file to include:
+   ```
+   RewriteEngine on
+   RewriteCond %{HTTP:Authorization} ^(.*)
+   RewriteRule ^(.*) - [E=HTTP_AUTHORIZATION:%1]
+   ```
+
+2. Add to your `wp-config.php`:
+   ```php
+   define('JWT_AUTH_SECRET_KEY', 'your-secret-key-here');
+   define('JWT_AUTH_CORS_ENABLE', true);
+   ```
+
+## Step 7: Create and Securely Store API Credentials
+
+1. Create a `.env.local` file in your React project root
+2. Add the API credentials:
+   ```
+   VITE_WP_APP_USERNAME=your_api_username
+   VITE_WP_APP_PASSWORD=your_api_password
+   ```
+3. Make sure `.env.local` is in your `.gitignore` file to prevent committing credentials
+
+## Security Best Practices
+
+1. Use a strong, unique password for the API user
+2. Regularly rotate the API user's password
+3. Limit the API user's capabilities to only what's necessary
+4. Use HTTPS for all API communications
+5. Consider IP restrictions for API access if possible
+6. Regularly audit your WordPress users and their capabilities
+7. Monitor API usage for suspicious activity
+
+## Testing the API User
+
+Test that the API user has the correct access by making a request to:
+
+```
+POST https://wpcms.thechief.com/wp-json/jwt-auth/v1/token
+{
+  "username": "your_api_username",
+  "password": "your_api_password"
+}
+```
+
+You should receive a token in response, which you can then use for authenticated API requests.
