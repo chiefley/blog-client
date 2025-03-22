@@ -5,7 +5,8 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Box, Container, Grid, AppBar, Toolbar, Typography, IconButton } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import Home from './pages/Home';
-import Sidebar from './components/layout/Sidebar';  // Add this import
+import Sidebar from './components/layout/Sidebar'; 
+import PostDetail from './components/posts/PostDetail'
 import apiAuthService from './services/apiAuthService';
 
 // Create a theme instance
@@ -95,7 +96,7 @@ function App() {
                                 ) : (
                                     <Routes>
                                         <Route path="/" element={<Home />} />
-                                        <Route path="/post/:slug" element={<div>Post Detail</div>} />
+                                        <Route path="/post/:slug" element={<PostDetail></PostDetail>} />
                                         {/* Add more routes as needed */}
                                     </Routes>
                                 )}
