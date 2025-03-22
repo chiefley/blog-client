@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WordPress JWT Authentication Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #1976d2;
+        }
+        .card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        input, button {
+            padding: 8px;
+            margin-bottom: 10px;
+            width: 100%;
+        }
+        button {
+            background-color: #1976d2;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover {
+            background-color: #1565c0;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .success {
+            color: #4caf50;
+            font-weight: bold;
+        }
+        .error {
+            color: #f44336;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>WordPress JWT Authentication Test</h1>
+    
+    <div class="card">
+        <h2>1. Configure Test</h2>
+        <div>
+            <label for="siteUrl">WordPress Site URL:</label>
+            <input type="text" id="siteUrl" placeholder="https://wpcms.thechief.com" value="https://wpcms.thechief.com">
+        </div>
+        <div>
+            <label for="username">Username:</label>
+            <input type="text" id="username" placeholder="Enter your username">
+        </div>
+        <div>
+            <label for="password">Password:</label>
+            <input type="password" id="password" placeholder="Enter your password">
+        </div>
+    </div>
+    
+    <div class="card">
+        <h2>2. Test JWT Authentication</h2>
+        <button id="getTokenBtn">Step 1: Get JWT Token</button>
+        <h3>Response:</h3>
+        <pre id="tokenResponse">Results will appear here...</pre>
+        
+        <div id="accessTestSection" style="display: none;">
+            <h3>JWT Token:</h3>
+            <pre id="jwtToken">No token yet</pre>
+            
+            <h3>Test Endpoints:</h3>
+            <div>
+                <label for="endpoint">REST API Endpoint to Test:</label>
+                <input type="text" id="endpoint" value="/wp-json/wp/v2/posts?per_page=1">
+            </div>
+            <button id="testWithTokenBtn">Step 2: Test with JWT Token</button>
+            <button id="testWithoutTokenBtn">Step 3: Test without JWT Token</button>
+            
+            <h3>With Token Response:</h3>
+            <pre id="withTokenResponse">Not tested yet</pre>
+            
+            <h3>Without Token Response:</h3>
+            <pre id="withoutTokenResponse">Not tested yet</pre>
+            
+            <h3>Authentication Status:</h3>
+            <pre id="authStatus">Not determined yet</pre>
+        </div>
+    </div>
+    
+    <div class="card">
+        <h2>WordPress Configuration Check</h2>
+        <p>Make sure you have the following in your <code>wp-config.php</code>:</p>
+        <pre>
+// JWT Authentication configuration
+define('JWT_AUTH_SECRET_KEY', 'your-strong-secret-key-here');
+define('JWT_AUTH_CORS_ENABLE', true);
+        </pre>
+        
+        <p>Make sure you have the following in your <code>.htaccess</code> file:</p>
+        <pre>
+RewriteEngine on
+RewriteCond %{HTTP:Authorization} ^(.*)
+RewriteRule ^(.*) - [E=HTTP_AUTHORIZATION:%1]
+        </pre>
+    </div>
+    
+    <script>
+        let jwtToken = null;
+        
+        document.getElementById('getTokenBtn').addEventListener('click', async () => {
+            const siteUrl = document.getElementById('siteUrl').value.trim();
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const tokenResponseElement = document.getElementById('tokenResponse');
+            
+            if (!siteUrl || !username || !password) {
+                tokenResponseElement.textContent = 'Please fill in all fields';
+                tokenResponseElement.className = 'error';
+                return;
+            }
+            
+            tokenResponseElement.textContent = 'Getting token...';
+            
+            try {
+                const tokenEndpoint = `${siteUrl}/wp-json/jwt-auth/v1/token`;
+                
+                const response = await fetch(tokenEndpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username,
+                        password
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.token) {
+                    jwtToken = data.token;
+                    
+                    tokenResponseElement.innerHTML = `<span class="success">SUCCESS! Token received.</span>\n\n${JSON.stringify(data, null, 2)}`;
+                    
+                    document.getElementById('accessTestSection').style.display = 'block';
+                    document.getElementById('jwtToken').textContent = jwtToken;
+                } else {
+                    tokenResponseElement.innerHTML = `<span class="error">ERROR! Failed to get token.</span>\n\n${JSON.stringify(data, null, 2)}`;
+                }
+            } catch (error) {
+                tokenResponseElement.innerHTML = `<span class="error">ERROR! Exception occurred:</span>\n\n${error.message}`;
+                console.error('Authentication Error:', error);
+            }
+        });
+        
+        document.getElementById('testWithTokenBtn').addEventListener('click', async () => {
+            const siteUrl = document.getElementById('siteUrl').value.trim();
+            const endpoint = document.getElementById('endpoint').value.trim();
+            const responseElement = document.getElementById('withTokenResponse');
+            
+            if (!jwtToken) {
+                responseElement.textContent = 'No token available. Please get a token first.';
+                responseElement.className = 'error';
+                return;
+            }
+            
+            responseElement.textContent = 'Testing with token...';
+            
+            try {
+                const fullUrl = `${siteUrl}${endpoint}`;
+                
+                const response = await fetch(fullUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${jwtToken}`
+                    }
+                });
+                
+                const statusText = response.status + ' ' + response.statusText;
+                
+                try {
+                    const data = await response.json();
+                    responseElement.innerHTML = `<span class="${response.ok ? 'success' : 'error'}">${statusText}</span>\n\n${JSON.stringify(data, null, 2)}`;
+                } catch (e) {
+                    const text = await response.text();
+                    responseElement.innerHTML = `<span class="${response.ok ? 'success' : 'error'}">${statusText}</span>\n\n${text}`;
+                }
+            } catch (error) {
+                responseElement.innerHTML = `<span class="error">ERROR! Exception occurred:</span>\n\n${error.message}`;
+                console.error('API Error:', error);
+            }
+        });
+        
+        document.getElementById('testWithoutTokenBtn').addEventListener('click', async () => {
+            const siteUrl = document.getElementById('siteUrl').value.trim();
+            const endpoint = document.getElementById('endpoint').value.trim();
+            const responseElement = document.getElementById('withoutTokenResponse');
+            const authStatusElement = document.getElementById('authStatus');
+            
+            responseElement.textContent = 'Testing without token...';
+            
+            try {
+                const fullUrl = `${siteUrl}${endpoint}`;
+                
+                const response = await fetch(fullUrl, {
+                    method: 'GET'
+                });
+                
+                const statusText = response.status + ' ' + response.statusText;
+                
+                try {
+                    const data = await response.json();
+                    responseElement.innerHTML = `<span class="${response.ok ? 'success' : 'error'}">${statusText}</span>\n\n${JSON.stringify(data, null, 2)}`;
+                    
+                    // Check authentication status
+                    const withTokenElement = document.getElementById('withTokenResponse');
+                    if (withTokenElement.textContent !== 'Not tested yet' && responseElement.textContent !== 'Not tested yet') {
+                        if (response.ok) {
+                            if (withTokenElement.textContent.includes('SUCCESS')) {
+                                authStatusElement.innerHTML = '<span class="error">JWT Authentication is NOT working properly - both authenticated and unauthenticated requests succeeded</span>';
+                            } else {
+                                authStatusElement.innerHTML = '<span class="error">JWT Authentication is NOT working properly - unauthenticated request succeeded but authenticated failed</span>';
+                            }
+                        } else {
+                            if (withTokenElement.textContent.includes('SUCCESS')) {
+                                authStatusElement.innerHTML = '<span class="success">JWT Authentication appears to be working correctly - authenticated request succeeded and unauthenticated failed</span>';
+                            } else {
+                                authStatusElement.innerHTML = '<span class="error">JWT Authentication is NOT working properly - both authenticated and unauthenticated requests failed</span>';
+                            }
+                        }
+                    }
+                } catch (e) {
+                    const text = await response.text();
+                    responseElement.innerHTML = `<span class="${response.ok ? 'success' : 'error'}">${statusText}</span>\n\n${text}`;
+                }
+            } catch (error) {
+                responseElement.innerHTML = `<span class="error">ERROR! Exception occurred:</span>\n\n${error.message}`;
+                console.error('API Error:', error);
+            }
+        });
+    </script>
+</body>
+</html>
