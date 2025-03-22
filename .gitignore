@@ -47,3 +47,4 @@ bld/
 [Oo]bj/
 [Ll]og/
 [Ll]ogs/
+/.env.local
