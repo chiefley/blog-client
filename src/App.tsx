@@ -6,8 +6,8 @@ import { Box, Container, Grid, AppBar, Toolbar, Typography, IconButton } from '@
 import MenuIcon from '@mui/icons-material/Menu';
 import Home from './pages/Home';
 import Sidebar from './components/layout/Sidebar'; 
-import PostDetail from './components/posts/PostDetail'
-import apiAuthService from './services/apiAuthService';
+import PostDetail from './components/posts/PostDetail';
+import { useAuth } from './services/authService';
 
 // Create a theme instance
 const theme = createTheme({
@@ -35,26 +35,28 @@ const theme = createTheme({
 });
 
 function App() {
-    // Track the API authentication state
+    // Track the API initialization
     const [apiInitialized, setApiInitialized] = useState(false);
+    
+    // Get authentication state from the hook
+    const { isAuthenticated } = useAuth();
 
-    // Initialize API authentication when the app loads
+    // Set API as initialized after auth check
     useEffect(() => {
-        const initializeApi = async () => {
-            try {
-                // Attempt to authenticate with the WordPress API
-                await apiAuthService.initialize();
-                setApiInitialized(true);
-            } catch (error) {
-                console.error('Failed to initialize API authentication:', error);
-                // Even if authentication fails, we can still set initialized
-                // since the API service will fall back to public access
-                setApiInitialized(true);
+        // Set apiInitialized to true after a short delay
+        // Even without authentication, the app can still run in public mode
+        const timer = setTimeout(() => {
+            setApiInitialized(true);
+            
+            if (isAuthenticated) {
+                console.log('WordPress API authenticated successfully');
+            } else {
+                console.warn('WordPress API not authenticated - operating in public mode');
             }
-        };
-
-        initializeApi();
-    }, []);
+        }, 1000);
+        
+        return () => clearTimeout(timer);
+    }, [isAuthenticated]);
 
     return (
         <ThemeProvider theme={theme}>
@@ -96,7 +98,7 @@ function App() {
                                 ) : (
                                     <Routes>
                                         <Route path="/" element={<Home />} />
-                                        <Route path="/post/:slug" element={<PostDetail></PostDetail>} />
+                                        <Route path="/post/:slug" element={<PostDetail />} />
                                         {/* Add more routes as needed */}
                                     </Routes>
                                 )}
