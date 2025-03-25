@@ -99,6 +99,7 @@ function App() {
                                     <Routes>
                                         <Route path="/" element={<Home />} />
                                         <Route path="/post/:slug" element={<PostDetail />} />
+                                        <Route path="/categories/:categoryId" element={<Home />} />
                                         {/* Add more routes as needed */}
                                     </Routes>
                                 )}

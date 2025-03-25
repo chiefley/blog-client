@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
     Box,
     Typography,
@@ -8,7 +8,7 @@ import {
     Alert
 } from '@mui/material';
 import PostCard from './PostCard';
-import { getPosts, WordPressPost } from '../../services/wordpressApi';
+import { getPosts, WordPressPost, getCategories } from '../../services/wordpressApi';
 
 // Helper function to extract URL parameters
 const useQuery = () => {
@@ -17,33 +17,67 @@ const useQuery = () => {
 
 interface PostListProps {
     title?: string;
+    categoryId?: string | null; // Add support for direct categoryId prop
 }
 
-const PostList: React.FC<PostListProps> = ({ title = 'Latest Posts' }) => {
+const PostList: React.FC<PostListProps> = ({ title = 'Latest Posts', categoryId: propCategoryId = null }) => {
     const [posts, setPosts] = useState<WordPressPost[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
+    const [categoryName, setCategoryName] = useState<string | null>(null);
     
+    const navigate = useNavigate();
+    const location = useLocation();
+    const { categoryId: routeCategoryId } = useParams<{ categoryId?: string }>();
     const query = useQuery();
-    const categorySlug = query.get('category');
+    const queryCategoryId = query.get('categories');
     const tagSlug = query.get('tag');
     const searchQuery = query.get('search');
+    const pageParam = query.get('page');
+    
+    // Determine the effective category ID from all possible sources
+    // Priority: prop > route param > query param
+    const effectiveCategoryId = propCategoryId || routeCategoryId || queryCategoryId;
+    
+    // Determine current page from URL or default to 1
+    const page = pageParam ? parseInt(pageParam, 10) : 1;
 
+    // Fetch posts when component mounts or when relevant parameters change
     useEffect(() => {
         const fetchPosts = async () => {
             setLoading(true);
             setError(null);
             
             try {
+                // If we have a category ID, fetch the category name
+                if (effectiveCategoryId) {
+                    try {
+                        const categories = await getCategories();
+                        const category = categories.find(cat => 
+                            cat.id.toString() === effectiveCategoryId.toString() || 
+                            cat.slug === effectiveCategoryId
+                        );
+                        
+                        if (category) {
+                            setCategoryName(category.name);
+                        }
+                    } catch (err) {
+                        console.error('Error fetching category:', err);
+                    }
+                }
+                
                 // This is a simplified version - we'd need to convert slugs to IDs
                 // by first fetching categories/tags or extending the API service
-                const categoryId = categorySlug ? parseInt(categorySlug) : undefined;
+                const categoryIdForApi = effectiveCategoryId ? 
+                    (isNaN(parseInt(effectiveCategoryId)) ? undefined : parseInt(effectiveCategoryId)) : 
+                    undefined;
+                    
                 const result = await getPosts({
                     page,
                     perPage: 5,
-                    categoryId,
+                    categoryId: categoryIdForApi,
+                    categorySlug: isNaN(parseInt(effectiveCategoryId || '')) ? effectiveCategoryId : undefined,
                     search: searchQuery || undefined
                 });
                 
@@ -58,18 +92,33 @@ const PostList: React.FC<PostListProps> = ({ title = 'Latest Posts' }) => {
         };
         
         fetchPosts();
-    }, [page, categorySlug, tagSlug, searchQuery]);
+    }, [page, effectiveCategoryId, tagSlug, searchQuery]);
 
-    const handlePageChange = (_: React.ChangeEvent<unknown>, value: number) => {
-        setPage(value);
+    const handlePageChange = (_: React.ChangeEvent<unknown>, newPage: number) => {
+        // Handle pagination differently based on the current URL structure
+        if (location.pathname.startsWith('/categories/')) {
+            // We're using path-based URLs - update just the page parameter
+            navigate(`${location.pathname}?page=${newPage}`);
+        } else if (effectiveCategoryId) {
+            // We're using query parameters with a category
+            const params = new URLSearchParams(location.search);
+            params.set('page', newPage.toString());
+            navigate(`/?${params.toString()}`);
+        } else {
+            // Regular pagination - just update the page parameter
+            const params = new URLSearchParams(location.search);
+            params.set('page', newPage.toString());
+            navigate(`/?${params.toString()}`);
+        }
+        
         // Scroll to top when changing pages
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     // Generate appropriate title based on filters
     let displayTitle = title;
-    if (categorySlug) {
-        displayTitle = `Category: ${categorySlug}`;
+    if (categoryName) {
+        displayTitle = `Category: ${categoryName}`;
     } else if (tagSlug) {
         displayTitle = `Tag: ${tagSlug}`;
     } else if (searchQuery) {

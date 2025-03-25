@@ -39,6 +39,18 @@ export interface WordPressPost {
   };
 }
 
+// Define interface for category
+export interface WordPressCategory {
+  id: number;
+  count: number;
+  description: string;
+  link: string;
+  name: string;
+  slug: string;
+  taxonomy: string;
+  parent: number;
+}
+
 // Base API URL from environment variables
 const API_BASE_URL = import.meta.env.VITE_WP_API_BASE_URL || 'https://wpcms.thechief.com';
 
@@ -94,17 +106,30 @@ export const getPosts = async (options: {
   page?: number;
   perPage?: number;
   categoryId?: number;
+  categorySlug?: string | null; // Added support for category slug
   search?: string;
 } = {}): Promise<{ posts: WordPressPost[]; totalPages: number }> => {
-  const { page = 1, perPage = 10, categoryId, search } = options;
+  const { page = 1, perPage = 10, categoryId, categorySlug, search } = options;
 
   const params = new URLSearchParams();
   params.append('page', page.toString());
   params.append('per_page', perPage.toString());
   params.append('_embed', 'author,wp:featuredmedia,wp:term');
 
+  // Handle either categoryId or categorySlug
   if (categoryId) {
     params.append('categories', categoryId.toString());
+  } else if (categorySlug) {
+    // If we have a slug instead of an ID, we need to first find the category ID
+    try {
+      const categories = await getCategories();
+      const category = categories.find(cat => cat.slug === categorySlug);
+      if (category) {
+        params.append('categories', category.id.toString());
+      }
+    } catch (error) {
+      console.error('Error finding category by slug:', error);
+    }
   }
 
   if (search) {
@@ -179,7 +204,7 @@ export const getPostBySlug = async (slug: string): Promise<WordPressPost | null>
 };
 
 // Get categories
-export const getCategories = async (): Promise<any[]> => {
+export const getCategories = async (): Promise<WordPressCategory[]> => {
   const apiUrl = getApiUrl();
 
   try {
@@ -204,6 +229,38 @@ export const getCategories = async (): Promise<any[]> => {
   } catch (error) {
     console.error('Error fetching categories:', error);
     return [];
+  }
+};
+
+// Get a specific category by slug
+export const getCategoryBySlug = async (slug: string): Promise<WordPressCategory | null> => {
+  const apiUrl = getApiUrl();
+
+  try {
+    // Get authentication header
+    const authHeader = createAuthHeader();
+
+    // Create request options with auth header
+    const requestOptions: RequestInit = {
+      headers: {
+        'Content-Type': 'application/json',
+        ...(authHeader || {})
+      }
+    };
+
+    const response = await fetch(`${apiUrl}/categories?slug=${slug}`, requestOptions);
+    
+    if (!response.ok) {
+      throw new Error(`API request failed with status ${response.status}`);
+    }
+    
+    const categories = await response.json();
+    
+    // The API returns an array, but we only want the first category with this slug
+    return categories.length > 0 ? categories[0] : null;
+  } catch (error) {
+    console.error('Error fetching category by slug:', error);
+    return null;
   }
 };
 

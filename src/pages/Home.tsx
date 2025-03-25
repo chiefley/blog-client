@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink, useParams, useLocation } from 'react-router-dom';
 import {
     Typography,
     Paper,
@@ -8,20 +8,53 @@ import {
     CardMedia
 } from '@mui/material';
 import PostList from '../components/posts/PostList';
-import { getPosts, WordPressPost } from '../services/wordpressApi';
+import { getPosts, getCategories, WordPressPost } from '../services/wordpressApi';
 
 const Home: React.FC = () => {
     const [featuredPost, setFeaturedPost] = useState<WordPressPost | null>(null);
     const [loading, setLoading] = useState(true);
+    const [categoryName, setCategoryName] = useState<string | null>(null);
+    
+    // Get category ID from either route params or query params
+    const { categoryId } = useParams<{ categoryId?: string }>();
+    const location = useLocation();
+    const searchParams = new URLSearchParams(location.search);
+    const queryCategoryId = searchParams.get('categories');
+    
+    // Use either categoryId from route params or query params
+    const effectiveCategoryId = categoryId || queryCategoryId;
 
-    // Fetch a featured post when component mounts
+    // Fetch posts when component mounts or when category/page changes
     useEffect(() => {
         const fetchFeaturedPost = async () => {
             try {
-                // Get the most recent post as featured post
-                const result = await getPosts({ perPage: 1 });
-                if (result.posts && result.posts.length > 0) {
-                    setFeaturedPost(result.posts[0]);
+                // If we have a category ID, fetch the category name
+                if (effectiveCategoryId) {
+                    try {
+                        const categories = await getCategories();
+                        const category = categories.find(cat => 
+                            cat.id.toString() === effectiveCategoryId.toString() || 
+                            cat.slug === effectiveCategoryId
+                        );
+                        
+                        if (category) {
+                            setCategoryName(category.name);
+                        } else {
+                            setCategoryName('Category');
+                        }
+                    } catch (err) {
+                        console.error('Error fetching category:', err);
+                        setCategoryName('Category');
+                    }
+                } else {
+                    setCategoryName(null);
+                    
+                    // Only fetch featured post on the main page (not category pages)
+                    // Get the most recent post as featured post
+                    const result = await getPosts({ perPage: 1 });
+                    if (result.posts && result.posts.length > 0) {
+                        setFeaturedPost(result.posts[0]);
+                    }
                 }
             } catch (error) {
                 console.error('Error fetching featured post:', error);
@@ -31,12 +64,19 @@ const Home: React.FC = () => {
         };
 
         fetchFeaturedPost();
-    }, []);
+    }, [effectiveCategoryId]);
 
     return (
         <Box sx={{ width: '100%' }}>
-            {/* Hero section with featured post */}
-            {featuredPost && (
+            {/* Display category name if we're showing a category */}
+            {categoryName && (
+                <Typography variant="h4" component="h1" sx={{ mb: 3 }}>
+                    {categoryName}
+                </Typography>
+            )}
+            
+            {/* Hero section with featured post - only show on main page */}
+            {!effectiveCategoryId && featuredPost && (
                 <Paper
                     elevation={0}
                     sx={{
@@ -101,8 +141,8 @@ const Home: React.FC = () => {
                 </Paper>
             )}
 
-            {/* Post list */}
-            <PostList />
+            {/* Post list - Pass category ID if we're filtering by category */}
+            <PostList categoryId={effectiveCategoryId} />
         </Box>
     );
 };
