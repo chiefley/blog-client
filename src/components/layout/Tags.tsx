@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Typography, 
   Chip, 
@@ -22,7 +22,7 @@ interface TagsProps {
   maxTags?: number;
 }
 
-const Tags: React.FC<TagsProps> = ({ title = "Tags", maxTags = 30 }) => {
+const Tags = ({ title = "Tags", maxTags = 30 }: TagsProps) => {
   const [tags, setTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,8 +30,8 @@ const Tags: React.FC<TagsProps> = ({ title = "Tags", maxTags = 30 }) => {
   useEffect(() => {
     const fetchTags = async () => {
       try {
-        // You should replace this with your actual API endpoint
-        const response = await fetch(`https://wpcms.thechief.com/wp-json/wp/v2/tags?per_page=${maxTags}`);
+        // Only fetch tags that have posts (count > 0)
+        const response = await fetch(`https://wpcms.thechief.com/wp-json/wp/v2/tags?per_page=${maxTags}&hide_empty=true`);
         
         if (!response.ok) {
           throw new Error(`Error fetching tags: ${response.status}`);
@@ -43,7 +43,7 @@ const Tags: React.FC<TagsProps> = ({ title = "Tags", maxTags = 30 }) => {
           name: tag.name,
           count: tag.count,
           slug: tag.slug
-        })));
+        })).filter((tag: Tag) => tag.count > 0)); // Additional filter to ensure we only show tags with posts
         setLoading(false);
       } catch (err) {
         console.error('Error fetching tags:', err);
@@ -71,10 +71,28 @@ const Tags: React.FC<TagsProps> = ({ title = "Tags", maxTags = 30 }) => {
     );
   }
 
+  // Filter out tags with zero posts
+  const filteredTags = tags.filter(tag => tag.count > 0);
+
+  // If no tags with posts exist
+  if (filteredTags.length === 0) {
+    return (
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h6" sx={{ mb: 1 }}>
+          {title}
+        </Typography>
+        <Divider sx={{ mb: 2 }} />
+        <Typography variant="body2" color="text.secondary">
+          No tags available yet.
+        </Typography>
+      </Box>
+    );
+  }
+
   // Calculate font size based on count for tag cloud effect
   const getTagSize = (count: number) => {
-    const min = Math.min(...tags.map(t => t.count));
-    const max = Math.max(...tags.map(t => t.count));
+    const min = Math.min(...filteredTags.map(t => t.count));
+    const max = Math.max(...filteredTags.map(t => t.count));
     const range = max - min;
     
     // Scale between 0.7 and 1.1 rem
@@ -92,12 +110,12 @@ const Tags: React.FC<TagsProps> = ({ title = "Tags", maxTags = 30 }) => {
       </Typography>
       <Divider sx={{ mb: 2 }} />
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-        {tags.map((tag) => (
+        {filteredTags.map((tag) => (
           <Chip
             key={tag.id}
-            label={tag.name}
+            label={`${tag.name} (${tag.count})`}
             component={RouterLink}
-            to={`/tag/${tag.slug}`}
+            to={`/posts/tag/${tag.slug}`}
             clickable
             size="small"
             sx={{
