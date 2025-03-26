@@ -1,6 +1,6 @@
-import { Card, CardContent, CardMedia, Typography, Box, Avatar } from '@mui/material';
+import { Card, CardContent, CardMedia, Typography, Box, Avatar, Chip } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
-import { PostCardProps } from '../../types/interfaces';
+import { PostCardProps, Category, Tag } from '../../types/interfaces';
 
 const PostCard = ({ post }: PostCardProps) => {
   // Get the featured image URL if available
@@ -35,9 +35,37 @@ const PostCard = ({ post }: PostCardProps) => {
     return { name: 'Unknown', avatar: 'https://via.placeholder.com/48' };
   };
   
+  // Get categories
+  const getCategories = (): Category[] => {
+    if (
+      post._embedded && 
+      post._embedded['wp:term'] && 
+      post._embedded['wp:term'][0]
+    ) {
+      return post._embedded['wp:term'][0] as Category[];
+    }
+    return [];
+  };
+  
+  // Get tags
+  const getTags = (): Tag[] => {
+    if (
+      post._embedded && 
+      post._embedded['wp:term'] && 
+      post._embedded['wp:term'][1]
+    ) {
+      return post._embedded['wp:term'][1] as Tag[];
+    }
+    return [];
+  };
 
   const author = getAuthor();
+  const categories = getCategories();
+  const tags = getTags();
   const date = new Date(post.date).toLocaleDateString();
+  
+  // Get comment count (safely)
+  const commentCount = post.comment_count || 0;
   
   return (
     <Card sx={{ 
@@ -69,7 +97,47 @@ const PostCard = ({ post }: PostCardProps) => {
       />
       <CardContent sx={{ flex: '1', display: 'flex', flexDirection: 'column' }}>
         <Box sx={{ mb: 1, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-          {/* Categories and tags would go here */}
+          {/* Categories */}
+          {categories.map((category) => (
+            <Chip
+              key={`category-${category.id}`}
+              label={category.name}
+              component={RouterLink}
+              to={`/posts/category/${category.slug}`}
+              size="small"
+              color="primary"
+              clickable
+              sx={{ 
+                borderRadius: 1,
+                '&:hover': { backgroundColor: 'primary.dark' }
+              }}
+            />
+          ))}
+          
+          {/* Tags */}
+          {tags.slice(0, 3).map((tag) => (
+            <Chip
+              key={`tag-${tag.id}`}
+              label={tag.name}
+              component={RouterLink}
+              to={`/posts/tag/${tag.slug}`}
+              size="small"
+              variant="outlined"
+              clickable
+              sx={{ 
+                borderRadius: 1,
+                '&:hover': { backgroundColor: 'action.hover' }
+              }}
+            />
+          ))}
+          {tags.length > 3 && (
+            <Chip
+              label={`+${tags.length - 3} more`}
+              size="small"
+              variant="outlined"
+              sx={{ borderRadius: 1 }}
+            />
+          )}
         </Box>
         
         <Typography 
@@ -109,7 +177,13 @@ const PostCard = ({ post }: PostCardProps) => {
             </Box>
           </Box>
           
-          {/* Comment count would go here */}
+          {commentCount > 0 && (
+            <Chip 
+              label={`${commentCount} ${commentCount === 1 ? 'comment' : 'comments'}`}
+              size="small"
+              sx={{ borderRadius: 1 }}
+            />
+          )}
         </Box>
       </CardContent>
     </Card>

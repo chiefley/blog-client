@@ -29,6 +29,8 @@ export interface WordPressPost {
         };
       };
     }>;
+    // Add wp:term for categories and tags
+    'wp:term'?: Array<Array<Category | Tag>>;
   };
   link: string;
   slug: string;
@@ -36,6 +38,7 @@ export interface WordPressPost {
   author: number;
   categories: number[];
   tags: number[];
+  comment_count?: number; // Add comment count property
 }
 
 // For backward compatibility with existing components

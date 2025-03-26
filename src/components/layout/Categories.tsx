@@ -132,7 +132,7 @@ const Categories: React.FC<CategoriesProps> = ({ title = "Categories" }) => {
       <React.Fragment key={category.id}>
         <ListItem 
           component={RouterLink} 
-          to={`/categories/${category.slug}`}  
+          to={`/posts/category/${category.slug}`}  
           sx={{ 
             textDecoration: 'none', 
             color: 'inherit',
