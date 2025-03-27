@@ -1,59 +1,77 @@
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
-import Header from './components/layout/Header';
-import Footer from './components/layout/Footer';
-import Sidebar from './components/layout/Sidebar';
+import React, { useState } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Box, Container, CssBaseline, Grid, useMediaQuery, useTheme } from '@mui/material';
+import { Header, Sidebar } from './components/layout';
 import Home from './pages/Home';
-import PostDetail from './components/posts/PostDetail';
 import CategoryPosts from './pages/CategoryPosts';
 import TagPosts from './pages/TagPosts';
+import PostDetail from './components/posts/PostDetail';
+import Footer from './components/layout/Footer';
+// Import other pages as needed
 
-// Create theme
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: '#1976d2',
-    },
-    secondary: {
-      main: '#f50057',
-    },
-    background: {
-      default: '#f5f5f5',
-    },
-  },
-  components: {
-    MuiCard: {
-      styleOverrides: {
-        root: {
-          borderRadius: 8,
-          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-        },
-      },
-    },
-  },
-});
+const App: React.FC = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-function App() {
+  // For authentication status (eventually from your auth service)
+  const isAuthenticated = false;
+
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
+  };
+
   return (
-    <ThemeProvider theme={theme}>
+    <Router>
       <CssBaseline />
-      <Router>
-        <Header />
-        <div style={{ display: 'flex', minHeight: 'calc(100vh - 120px)' }}>
-          <Sidebar />
-          <main style={{ flexGrow: 1, padding: '16px' }}>
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/post/:slug" element={<PostDetail />} />
-              <Route path="/posts/category/:slug" element={<CategoryPosts />} />
-              <Route path="/posts/tag/:slug" element={<TagPosts />} />
-            </Routes>
-          </main>
-        </div>
+      <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+        <Header onMenuClick={toggleSidebar} sidebarOpen={sidebarOpen} />
+        
+        <Box component="main" sx={{ flexGrow: 1, py: 3 }}>
+          <Container maxWidth="lg">
+            <Grid container spacing={3}>
+              {/* Sidebar - Hidden on mobile unless opened */}
+              <Grid 
+                item 
+                xs={12} 
+                md={3}
+                sx={{ 
+                  display: isMobile ? (sidebarOpen ? 'block' : 'none') : 'block',
+                  position: isMobile ? 'fixed' : 'static',
+                  top: isMobile ? 64 : 'auto',
+                  left: 0,
+                  width: isMobile ? '85%' : 'auto', // Control width on mobile
+                  maxWidth: isMobile ? '300px' : 'none',
+                  bottom: 0,
+                  zIndex: 100,
+                  overflowY: 'auto',
+                  padding: isMobile ? 2 : 'inherit',
+                  backgroundColor: 'background.paper',
+                  height: isMobile ? 'calc(100% - 64px)' : 'auto',
+                  boxShadow: isMobile ? 3 : 0
+                }}
+              >
+                <Sidebar isAuthenticated={isAuthenticated} />
+              </Grid>
+
+              {/* Main Content */}
+              <Grid item xs={12} md={isMobile ? 12 : 9}>
+                <Routes>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/posts/category/:slug" element={<CategoryPosts />} />
+                  <Route path="/posts/tag/:slug" element={<TagPosts />} />
+                  <Route path="/post/:slug" element={<PostDetail />} />
+                  {/* Add other routes as needed */}
+                </Routes>
+              </Grid>
+            </Grid>
+          </Container>
+        </Box>
+
         <Footer />
-      </Router>
-    </ThemeProvider>
+      </Box>
+    </Router>
   );
-}
+};
 
 export default App;
