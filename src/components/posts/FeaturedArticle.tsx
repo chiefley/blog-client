@@ -1,11 +1,21 @@
 import React from 'react';
 import { Box, Typography, Paper, Button } from '@mui/material';
+import { styled } from '@mui/system'; // Add this import
 import { Link as RouterLink } from 'react-router-dom';
 import { WordPressPost } from '../../types/interfaces';
 
 interface FeaturedArticleProps {
   post: WordPressPost;
 }
+
+// Now define HeaderLabel after importing styled
+const HeaderLabel = styled(Box)(({ theme }) => ({
+  position: 'relative',
+  zIndex: 3,
+  padding: theme.spacing(3),
+  paddingBottom: 0,
+  color: '#fff',
+}));
 
 const FeaturedArticle: React.FC<FeaturedArticleProps> = ({ post }) => {
   // Get the featured image URL if available, or use a default
@@ -93,6 +103,23 @@ const FeaturedArticle: React.FC<FeaturedArticleProps> = ({ post }) => {
           }
         }}
       />
+
+      {/* Featured Article Label */}
+      <HeaderLabel>
+        <Typography 
+          variant="overline" 
+          component="div" 
+          sx={{ 
+            fontWeight: 'bold', 
+            fontSize: '1rem',
+            letterSpacing: '0.1em',
+            opacity: 0.9,
+            textTransform: 'uppercase'
+          }}
+        >
+          Featured Article
+        </Typography>
+      </HeaderLabel>
       
       {/* Content overlay - pushed toward the bottom */}
       <Box 
