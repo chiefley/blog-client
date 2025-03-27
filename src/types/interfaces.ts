@@ -64,6 +64,7 @@ export interface Category {
   count: number;
   slug: string;
   parent: number;
+  taxonomy?: string; // Added taxonomy property
 }
 
 // Interface for tag objects
@@ -72,4 +73,6 @@ export interface Tag {
   name: string;
   count: number;
   slug: string;
+  taxonomy?: string; // Added taxonomy property
+  parent?: number;   // Some tags might have a parent property
 }

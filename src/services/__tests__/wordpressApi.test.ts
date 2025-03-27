@@ -2,26 +2,29 @@ import { describe, it, expect, vi, beforeAll, afterEach, afterAll } from 'vitest
 import { setupServer } from 'msw/node'
 import { http, HttpResponse } from 'msw'
 import { getPosts } from '../wordpressApi'
+import { WordPressPost } from '../../types/interfaces'
 
 // Mock data for tests
-const mockPosts = [
+const mockPosts: WordPressPost[] = [
     {
         id: 1,
         date: '2023-01-01T12:00:00',
         slug: 'test-post',
         title: { rendered: 'Test Post' },
-        content: { rendered: '<p>Test content</p>' },
+        content: { rendered: '<p>Test content</p>', protected: false },
         excerpt: { rendered: '<p>Test excerpt</p>' },
         featured_media: 123,
         author: 1,
         categories: [1, 2],
         tags: [3, 4],
+        link: 'https://example.com/test-post',
         _embedded: {
-            author: [{ id: 1, name: 'Test Author', avatar_urls: { '96': 'test.jpg' } }],
-            'wp:featuredmedia': [{ source_url: 'featured.jpg', alt_text: 'Featured image' }],
+            author: [{ name: 'Test Author', avatar_urls: { '96': 'test.jpg' } }],
+            'wp:featuredmedia': [{ source_url: 'featured.jpg' }],
             'wp:term': [
-                [{ id: 1, name: 'Category 1', slug: 'category-1', taxonomy: 'category' }],
-                [{ id: 3, name: 'Tag 1', slug: 'tag-1', taxonomy: 'post_tag' }]
+                // Use type assertion to allow additional properties
+                [{ id: 1, name: 'Category 1', slug: 'category-1', parent: 0, count: 5 } as any],
+                [{ id: 3, name: 'Tag 1', slug: 'tag-1', parent: 0, count: 3 } as any]
             ]
         }
     }

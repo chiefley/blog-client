@@ -14,7 +14,8 @@ import {
     CardMedia
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { getPostBySlug, WordPressPost } from '../../services/wordpressApi';
+import { getPostBySlug } from '../../services/wordpressApi';
+import { WordPressPost } from '../../types/interfaces';
 import parse from 'html-react-parser';
 
 const PostDetail: React.FC = () => {
@@ -34,6 +35,11 @@ const PostDetail: React.FC = () => {
                 const postData = await getPostBySlug(slug);
                 
                 if (postData) {
+                    // Log embedded data to check structure
+                    if (postData._embedded) {
+                        console.log('Post _embedded data:', postData._embedded);
+                    }
+                    
                     setPost(postData);
                 } else {
                     setError('Post not found');
@@ -84,9 +90,26 @@ const PostDetail: React.FC = () => {
         day: 'numeric'
     });
 
-    // Get categories and tags
+    // Get categories and tags - with more robust handling
     const categories = post._embedded?.['wp:term']?.[0] || [];
-    const tags = post._embedded?.['wp:term']?.[1] || [];
+    
+    // Get tags more robustly
+    let tags: any[] = [];
+    
+    // First try the standard location
+    if (post._embedded?.['wp:term']?.[1]) {
+        tags = post._embedded['wp:term'][1];
+    }
+    
+    // If that doesn't work, try to find tags by taxonomy attribute
+    if (tags.length === 0 && post._embedded?.['wp:term']) {
+        const allTerms = post._embedded['wp:term'].flat();
+        tags = allTerms.filter((term: any) => term.taxonomy === 'post_tag');
+    }
+    
+    // Check if we have tag IDs but no tag data
+    const hasTagIds = post.tags && post.tags.length > 0;
+    const hasTagData = tags.length > 0;
 
     // Get featured image
     const featuredImage = post._embedded?.['wp:featuredmedia']?.[0]?.source_url;
@@ -117,7 +140,7 @@ const PostDetail: React.FC = () => {
                                 key={`cat-${category.id}`}
                                 label={category.name}
                                 component={RouterLink}
-                                to={`/?category=${category.slug}`}
+                                to={`/posts/category/${category.slug}`}
                                 size="small"
                                 color="primary"
                                 clickable
@@ -201,27 +224,43 @@ const PostDetail: React.FC = () => {
                     {parse(content)}
                 </Box>
 
-                {/* Tags */}
-                {tags.length > 0 && (
-                    <Box sx={{ mt: 4 }}>
-                        <Typography variant="h6" gutterBottom>
-                            Tags
-                        </Typography>
+                {/* Tags - always show section with appropriate message if no tags */}
+                <Box sx={{ mt: 4 }}>
+                    <Typography variant="h6" gutterBottom>
+                        Tags
+                    </Typography>
+                    
+                    {hasTagData ? (
                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                             {tags.map((tag: any) => (
                                 <Chip
                                     key={`tag-${tag.id}`}
                                     label={tag.name}
                                     component={RouterLink}
-                                    to={`/?tag=${tag.slug}`}
+                                    to={`/posts/tag/${tag.slug}`}
                                     size="small"
                                     variant="outlined"
                                     clickable
+                                    sx={{
+                                        borderColor: 'primary.light',
+                                        '&:hover': {
+                                            backgroundColor: 'primary.light',
+                                            color: 'white'
+                                        }
+                                    }}
                                 />
                             ))}
                         </Box>
-                    </Box>
-                )}
+                    ) : hasTagIds ? (
+                        <Typography variant="body2" color="text.secondary">
+                            This post has tags, but the tag data could not be loaded.
+                        </Typography>
+                    ) : (
+                        <Typography variant="body2" color="text.secondary">
+                            No tags for this post.
+                        </Typography>
+                    )}
+                </Box>
 
                 {/* Author box */}
                 <Box sx={{ mt: 4, p: 3, bgcolor: 'background.default', borderRadius: 2 }}>

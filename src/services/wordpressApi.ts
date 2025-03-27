@@ -1,55 +1,5 @@
 // src/services/wordpressApi.ts
-
-// Define interfaces for WordPress API responses
-export interface WordPressPost {
-  id: number;
-  date: string;
-  slug: string;
-  title: {
-    rendered: string;
-  };
-  content: {
-    rendered: string;
-  };
-  excerpt: {
-    rendered: string;
-  };
-  featured_media: number;
-  author: number;
-  categories: number[];
-  tags: number[];
-  _embedded?: {
-    author?: Array<{
-      id: number;
-      name: string;
-      avatar_urls?: {
-        [key: string]: string;
-      };
-    }>;
-    'wp:featuredmedia'?: Array<{
-      source_url: string;
-      alt_text?: string;
-    }>;
-    'wp:term'?: Array<Array<{
-      id: number;
-      name: string;
-      slug: string;
-      taxonomy: 'category' | 'post_tag';
-    }>>;
-  };
-}
-
-// Define interface for category
-export interface WordPressCategory {
-  id: number;
-  count: number;
-  description: string;
-  link: string;
-  name: string;
-  slug: string;
-  taxonomy: string;
-  parent: number;
-}
+import { WordPressPost, Category } from '../types/interfaces';
 
 // Base API URL from environment variables
 const API_BASE_URL = import.meta.env.VITE_WP_API_BASE_URL || 'https://wpcms.thechief.com';
@@ -195,6 +145,9 @@ export const getPostBySlug = async (slug: string): Promise<WordPressPost | null>
     
     const posts = await response.json();
     
+    // Log the raw response to help debug
+    console.log('API Response for post:', posts);
+    
     // The API returns an array, but we only want the first post with this slug
     return posts.length > 0 ? posts[0] : null;
   } catch (error) {
@@ -204,7 +157,7 @@ export const getPostBySlug = async (slug: string): Promise<WordPressPost | null>
 };
 
 // Get categories
-export const getCategories = async (): Promise<WordPressCategory[]> => {
+export const getCategories = async (): Promise<Category[]> => {
   const apiUrl = getApiUrl();
 
   try {
@@ -233,7 +186,7 @@ export const getCategories = async (): Promise<WordPressCategory[]> => {
 };
 
 // Get a specific category by slug
-export const getCategoryBySlug = async (slug: string): Promise<WordPressCategory | null> => {
+export const getCategoryBySlug = async (slug: string): Promise<Category | null> => {
   const apiUrl = getApiUrl();
 
   try {
