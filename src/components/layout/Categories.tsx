@@ -16,6 +16,7 @@ import {
   ArrowRight as ArrowRightIcon
 } from '@mui/icons-material';
 import { Link as RouterLink } from 'react-router-dom';
+import { getCategories } from '../../services/wordpressApi';
 
 // Define the interface for category objects
 interface Category {
@@ -41,15 +42,10 @@ const Categories: React.FC<CategoriesProps> = ({ title = "Categories" }) => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        // You should replace this with your actual API endpoint
-        const response = await fetch('https://wpcms.thechief.com/wp-json/wp/v2/categories?per_page=100');
+        // Use the API service instead of direct fetch to include authentication
+        const categoriesData = await getCategories();
         
-        if (!response.ok) {
-          throw new Error(`Error fetching categories: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        const flatCategories = data.map((cat: any) => ({
+        const flatCategories = categoriesData.map((cat: any) => ({
           id: cat.id,
           name: cat.name,
           count: cat.count,

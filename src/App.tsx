@@ -7,25 +7,69 @@ import CategoryPosts from './pages/CategoryPosts';
 import TagPosts from './pages/TagPosts';
 import PostDetail from './components/posts/PostDetail';
 import Footer from './components/layout/Footer';
-// Import other pages as needed
+import { useAuth } from './services/authService';
+// import { testAuthentication } from './services/authService';
+// import AuthTest from './components/utils/AuthTest'; // Import AuthTest component - adjust path if needed
 
 const App: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  // For authentication status (eventually from your auth service)
-  const isAuthenticated = false;
+  // Get authentication status from the auth service
+  const { isAuthenticated } = useAuth();
+  
+  // Add debug logging in development (uncomment if needed)
+  /*
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Authentication status:', isAuthenticated ? 'Authenticated' : 'Not authenticated');
+    }
+  }, [isAuthenticated]);
+  */
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
   };
+
+  // Run authentication test on initial load (uncomment if needed for troubleshooting)
+  /*
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      testAuthentication().then(result => {
+        console.log('Authentication test result:', result ? 'Success' : 'Failed');
+      });
+    }
+  }, []);
+  */
 
   return (
     <Router>
       <CssBaseline />
       <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
         <Header onMenuClick={toggleSidebar} sidebarOpen={sidebarOpen} />
+        
+        {/* Auth Test Button - Uncomment if needed for debugging
+        {process.env.NODE_ENV === 'development' && (
+          <Box sx={{ position: 'fixed', top: 12, right: 12, zIndex: 9999 }}>
+            <Button 
+              variant="contained" 
+              color="secondary"
+              size="small"
+              onClick={() => setShowAuthTest(!showAuthTest)}
+            >
+              {showAuthTest ? 'Hide Auth Test' : 'Show Auth Test'}
+            </Button>
+          </Box>
+        )}
+        */}
+        
+        {/* AuthTest Debug Component - Only in Development 
+        {process.env.NODE_ENV === 'development' && showAuthTest && (
+          <Container sx={{ mt: 10, mb: 2 }}>
+            <AuthTest />
+          </Container>
+        )}
+        */}
         
         <Box component="main" sx={{ flexGrow: 1, py: 3 }}>
           <Container maxWidth="lg">

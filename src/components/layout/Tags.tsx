@@ -7,6 +7,7 @@ import {
   CircularProgress 
 } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
+import { getTags } from '../../services/wordpressApi';
 
 // Define the interface for tag objects
 interface Tag {
@@ -30,20 +31,10 @@ const Tags = ({ title = "Tags", maxTags = 30 }: TagsProps) => {
   useEffect(() => {
     const fetchTags = async () => {
       try {
-        // Only fetch tags that have posts (count > 0)
-        const response = await fetch(`https://wpcms.thechief.com/wp-json/wp/v2/tags?per_page=${maxTags}&hide_empty=true`);
+        // Use the API service instead of direct fetch to include authentication
+        const tagsData = await getTags();
         
-        if (!response.ok) {
-          throw new Error(`Error fetching tags: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        setTags(data.map((tag: any) => ({
-          id: tag.id,
-          name: tag.name,
-          count: tag.count,
-          slug: tag.slug
-        })).filter((tag: Tag) => tag.count > 0)); // Additional filter to ensure we only show tags with posts
+        setTags(tagsData.filter((tag: Tag) => tag.count > 0)); // Filter only tags with posts
         setLoading(false);
       } catch (err) {
         console.error('Error fetching tags:', err);

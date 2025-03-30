@@ -9,6 +9,7 @@ import {
 } from '@mui/material';
 import PostList from '../components/posts/PostList';
 import { WordPressPost } from '../types/interfaces';
+import { createAuthHeader } from '../services/authService';
 
 const TagPosts = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -20,10 +21,28 @@ const TagPosts = () => {
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
-    const fetchTagInfo = async () => {
+    const fetchTagPosts = async () => {
+      if (!slug) {
+        setError('Tag slug is missing');
+        setLoading(false);
+        return;
+      }
+
       try {
-        // First fetch tag information to get the ID and proper name
-        const tagResponse = await fetch(`https://wpcms.thechief.com/wp-json/wp/v2/tags?slug=${slug}`);
+        // Get authentication header
+        const authHeader = createAuthHeader();
+
+        // Create request options with auth header
+        const requestOptions: RequestInit = {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(authHeader || {})
+          }
+        };
+
+        // First get tag information
+        const baseUrl = 'https://wpcms.thechief.com';
+        const tagResponse = await fetch(`${baseUrl}/wp-json/wp/v2/tags?slug=${slug}`, requestOptions);
         
         if (!tagResponse.ok) {
           throw new Error(`Error fetching tag info: ${tagResponse.status}`);
@@ -40,10 +59,13 @@ const TagPosts = () => {
         const tagId = tagData[0].id;
         setTagName(tagData[0].name);
         
-        // Then fetch posts for this tag
-        const postsResponse = await fetch(
-          `https://wpcms.thechief.com/wp-json/wp/v2/posts?tags=${tagId}&_embed=true&page=${currentPage}&per_page=10`
-        );
+        // Directly fetch posts with this tag
+        const postsUrl = `${baseUrl}/wp-json/wp/v2/posts?tags=${tagId}&_embed=true&page=${currentPage}&per_page=10`;
+        
+        console.log('Fetching tag posts with URL:', postsUrl);
+        console.log('Using auth header:', !!authHeader);
+        
+        const postsResponse = await fetch(postsUrl, requestOptions);
         
         if (!postsResponse.ok && postsResponse.status !== 400) {
           throw new Error(`Error fetching posts: ${postsResponse.status}`);
@@ -64,7 +86,7 @@ const TagPosts = () => {
 
     setLoading(true);
     setError(null);
-    fetchTagInfo();
+    fetchTagPosts();
   }, [slug, currentPage]);
 
   const handlePageChange = (page: number) => {

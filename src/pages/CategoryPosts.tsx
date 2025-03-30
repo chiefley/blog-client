@@ -9,6 +9,7 @@ import {
 } from '@mui/material';
 import PostList from '../components/posts/PostList';
 import { WordPressPost } from '../types/interfaces';
+import { getPosts, getCategoryBySlug } from '../services/wordpressApi';
 
 const CategoryPosts = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -20,40 +21,34 @@ const CategoryPosts = () => {
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
-    const fetchCategoryInfo = async () => {
+    const fetchCategoryPosts = async () => {
+      if (!slug) {
+        setError('Category slug is missing');
+        setLoading(false);
+        return;
+      }
+
       try {
         // First fetch category information to get the ID and proper name
-        const categoryResponse = await fetch(`https://wpcms.thechief.com/wp-json/wp/v2/categories?slug=${slug}`);
+        const categoryData = await getCategoryBySlug(slug);
         
-        if (!categoryResponse.ok) {
-          throw new Error(`Error fetching category info: ${categoryResponse.status}`);
-        }
-        
-        const categoryData = await categoryResponse.json();
-        
-        if (categoryData.length === 0) {
+        if (!categoryData) {
           setError(`Category "${slug}" not found.`);
           setLoading(false);
           return;
         }
         
-        const categoryId = categoryData[0].id;
-        setCategoryName(categoryData[0].name);
+        setCategoryName(categoryData.name);
         
         // Then fetch posts for this category
-        const postsResponse = await fetch(
-          `https://wpcms.thechief.com/wp-json/wp/v2/posts?categories=${categoryId}&_embed=true&page=${currentPage}&per_page=10`
-        );
+        const result = await getPosts({
+          page: currentPage,
+          perPage: 10,
+          categoryId: categoryData.id
+        });
         
-        if (!postsResponse.ok && postsResponse.status !== 400) {
-          throw new Error(`Error fetching posts: ${postsResponse.status}`);
-        }
-        
-        const totalPagesHeader = postsResponse.headers.get('X-WP-TotalPages');
-        setTotalPages(totalPagesHeader ? parseInt(totalPagesHeader) : 1);
-        
-        const postsData = await postsResponse.json();
-        setPosts(postsData);
+        setPosts(result.posts);
+        setTotalPages(result.totalPages);
         setLoading(false);
       } catch (err) {
         console.error('Error:', err);
@@ -64,7 +59,7 @@ const CategoryPosts = () => {
 
     setLoading(true);
     setError(null);
-    fetchCategoryInfo();
+    fetchCategoryPosts();
   }, [slug, currentPage]);
 
   const handlePageChange = (page: number) => {
