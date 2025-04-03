@@ -185,7 +185,7 @@ const PostDetail: React.FC = () => {
                             alt={title}
                             sx={{
                                 width: '100%',
-                                maxHeight: 500,
+                                maxHeight: 250,
                                 objectFit: 'cover',
                                 borderRadius: 1
                             }}
