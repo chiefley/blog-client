@@ -32,67 +32,8 @@ const getApiUrl = (): string => {
   return apiUrl;
 };
 
-/**
- * Helper function to make authenticated API requests
- * Centralizes authentication and error handling
- */
-const makeAuthenticatedRequest = async <T>(url: string): Promise<T> => {
-  try {
-    // Get authentication header
-    const authHeader = createAuthHeader();
-    
-    if (!authHeader) {
-      console.warn('⚠️ Making unauthenticated request because auth header is not available');
-    }
-    
-    // Log detailed request information
-    console.log('🌐 API Request:');
-    console.log('  - URL:', url);
-    console.log('  - Using auth:', !!authHeader);
-    console.log('  - Current location:', window.location.href);
-    
-    // Create request options with auth header
-    const requestOptions: RequestInit = {
-      headers: {
-        'Content-Type': 'application/json',
-        ...(authHeader || {})
-      }
-    };
-    
-    // Make the request
-    const response = await fetch(url, requestOptions);
-    
-    // Log response information
-    console.log('  - Response status:', response.status, response.statusText);
-    
-    // Handle error responses
-    if (!response.ok) {
-      console.error('  - Request failed');
-      
-      // Try to get more detailed error information
-      try {
-        const errorData = await response.json();
-        console.error('  - Error details:', errorData);
-      } catch (e) {
-        // If we can't parse JSON, try to get the text
-        try {
-          const errorText = await response.text();
-          console.error('  - Error response:', errorText.substring(0, 500));
-        } catch (e2) {
-          console.error('  - Could not parse error details');
-        }
-      }
-      
-      throw new Error(`API request failed with status ${response.status}`);
-    }
-    
-    // Return the parsed JSON data
-    return await response.json();
-  } catch (error) {
-    console.error('  - Error making request:', error);
-    throw error;
-  }
-};
+// Helper function code has been removed to fix TS6133 error
+// We can reimplement this in the future if needed
 
 /**
  * Get posts with optional filtering
