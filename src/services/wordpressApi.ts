@@ -1,33 +1,16 @@
 // src/services/wordpressApi.ts
 import { WordPressPost, Category } from '../types/interfaces';
 import { createAuthHeader } from './authService';
+import { getCurrentBlogPath } from '../config/multisiteConfig';
 
 // Base API URL from environment variables
 const API_BASE_URL = import.meta.env.VITE_WP_API_BASE_URL || 'https://wpcms.thechief.com';
 
 /**
- * Get the blog-specific path from environment variables or current URL
- */
-const getBlogPath = (): string => {
-  // Default to main blog if no specific blog is selected
-  const currentBlog = window.location.pathname.split('/')[1] || '';
-  
-  // Map the path to the corresponding blog slug in WordPress multisite
-  switch (currentBlog) {
-    case 'hamradio':
-      return import.meta.env.VITE_WP_BLOG_HAMRADIO || 'wa1x';
-    case 'science':
-      return import.meta.env.VITE_WP_BLOG_SCIENCE || 'applefinch';
-    default:
-      return import.meta.env.VITE_WP_BLOG_MAIN || '';
-  }
-};
-
-/**
  * Construct the full API URL for the current blog
  */
 const getApiUrl = (): string => {
-  const blogPath = getBlogPath();
+  const blogPath = getCurrentBlogPath();
   let apiUrl = `${API_BASE_URL}`;
   
   // Add blog path if we're in a multisite environment
@@ -37,7 +20,78 @@ const getApiUrl = (): string => {
   
   // Add the REST API endpoint
   apiUrl += '/wp-json/wp/v2';
+  
+  // Debug logging
+  console.log('🌐 API URL Construction:');
+  console.log('  - Hostname:', window.location.hostname);
+  console.log('  - Path:', window.location.pathname);
+  console.log('  - Detected blog path:', blogPath ? `"${blogPath}"` : '(main blog)');
+  console.log('  - Base API URL:', API_BASE_URL);
+  console.log('  - Final API URL:', apiUrl);
+  
   return apiUrl;
+};
+
+/**
+ * Helper function to make authenticated API requests
+ * Centralizes authentication and error handling
+ */
+const makeAuthenticatedRequest = async <T>(url: string): Promise<T> => {
+  try {
+    // Get authentication header
+    const authHeader = createAuthHeader();
+    
+    if (!authHeader) {
+      console.warn('⚠️ Making unauthenticated request because auth header is not available');
+    }
+    
+    // Log detailed request information
+    console.log('🌐 API Request:');
+    console.log('  - URL:', url);
+    console.log('  - Using auth:', !!authHeader);
+    console.log('  - Current location:', window.location.href);
+    
+    // Create request options with auth header
+    const requestOptions: RequestInit = {
+      headers: {
+        'Content-Type': 'application/json',
+        ...(authHeader || {})
+      }
+    };
+    
+    // Make the request
+    const response = await fetch(url, requestOptions);
+    
+    // Log response information
+    console.log('  - Response status:', response.status, response.statusText);
+    
+    // Handle error responses
+    if (!response.ok) {
+      console.error('  - Request failed');
+      
+      // Try to get more detailed error information
+      try {
+        const errorData = await response.json();
+        console.error('  - Error details:', errorData);
+      } catch (e) {
+        // If we can't parse JSON, try to get the text
+        try {
+          const errorText = await response.text();
+          console.error('  - Error response:', errorText.substring(0, 500));
+        } catch (e2) {
+          console.error('  - Could not parse error details');
+        }
+      }
+      
+      throw new Error(`API request failed with status ${response.status}`);
+    }
+    
+    // Return the parsed JSON data
+    return await response.json();
+  } catch (error) {
+    console.error('  - Error making request:', error);
+    throw error;
+  }
 };
 
 /**
@@ -83,9 +137,6 @@ export const getPosts = async (options: {
   try {
     // Get authentication header from authService
     const authHeader = createAuthHeader();
-
-    // For debugging only - REMOVE IN PRODUCTION
-    console.log('Fetching posts with auth:', !!authHeader);
     
     // Create request options with auth header
     const requestOptions: RequestInit = {
@@ -101,21 +152,35 @@ export const getPosts = async (options: {
 
     const response = await fetch(requestUrl, requestOptions);
     
-    // Log response headers for debugging
-    console.log('Response status:', response.status);
-    console.log('Response headers:', {
-      'X-WP-Total': response.headers.get('X-WP-Total'),
-      'X-WP-TotalPages': response.headers.get('X-WP-TotalPages')
+    // Log response details for debugging
+    console.log(`Posts API Response [${response.status}]:`, {
+      url: requestUrl,
+      authenticated: !!authHeader,
+      status: response.status,
+      headers: {
+        'X-WP-Total': response.headers.get('X-WP-Total'),
+        'X-WP-TotalPages': response.headers.get('X-WP-TotalPages')
+      }
     });
     
     // Check if the request was successful
     if (!response.ok) {
-      throw new Error(`API request failed with status ${response.status}`);
+      // Try to get more information about the error
+      let errorDetails = '';
+      try {
+        const errorData = await response.text();
+        errorDetails = errorData.substring(0, 200); // First 200 chars for brevity
+      } catch (e) {
+        // Ignore if we can't get error details
+      }
+      
+      throw new Error(`API request failed with status ${response.status}: ${errorDetails}`);
     }
     
     const posts = await response.json();
     const totalPages = parseInt(response.headers.get('X-WP-TotalPages') || '1', 10);
-
+    
+    console.log(`Successfully fetched ${posts.length} posts, total pages: ${totalPages}`);
     return { posts, totalPages };
   } catch (error) {
     console.error('Error fetching posts:', error);
@@ -153,8 +218,25 @@ export const getPostBySlug = async (slug: string): Promise<WordPressPost | null>
 
     const response = await fetch(requestUrl, requestOptions);
     
+    // Log response details for debugging
+    console.log(`Post by Slug API Response [${response.status}]:`, {
+      slug,
+      url: requestUrl,
+      authenticated: !!authHeader,
+      status: response.status
+    });
+    
     if (!response.ok) {
-      throw new Error(`API request failed with status ${response.status}`);
+      // Try to get more information about the error
+      let errorDetails = '';
+      try {
+        const errorData = await response.text();
+        errorDetails = errorData.substring(0, 200); // First 200 chars for brevity
+      } catch (e) {
+        // Ignore if we can't get error details
+      }
+      
+      throw new Error(`API request failed with status ${response.status}: ${errorDetails}`);
     }
     
     const posts = await response.json();
@@ -186,16 +268,34 @@ export const getCategories = async (): Promise<Category[]> => {
       }
     };
 
-    // For debugging
     console.log('Fetching categories with auth:', !!authHeader);
+    console.log('Categories request URL:', requestUrl);
 
     const response = await fetch(requestUrl, requestOptions);
     
+    // Log response details for debugging
+    console.log(`Categories API Response [${response.status}]:`, {
+      url: requestUrl,
+      authenticated: !!authHeader,
+      status: response.status
+    });
+    
     if (!response.ok) {
-      throw new Error(`API request failed with status ${response.status}`);
+      // Try to get more information about the error
+      let errorDetails = '';
+      try {
+        const errorData = await response.text();
+        errorDetails = errorData.substring(0, 200); // First 200 chars for brevity
+      } catch (e) {
+        // Ignore if we can't get error details
+      }
+      
+      throw new Error(`API request failed with status ${response.status}: ${errorDetails}`);
     }
     
-    return await response.json();
+    const categories = await response.json();
+    console.log(`Successfully fetched ${categories.length} categories`);
+    return categories;
   } catch (error) {
     console.error('Error fetching categories:', error);
     return [];
@@ -221,10 +321,31 @@ export const getCategoryBySlug = async (slug: string): Promise<Category | null> 
       }
     };
 
+    console.log('Fetching category by slug:', slug);
+    console.log('Request URL:', requestUrl);
+    console.log('With auth header:', !!authHeader);
+
     const response = await fetch(requestUrl, requestOptions);
     
+    // Log response details for debugging
+    console.log(`Category by Slug API Response [${response.status}]:`, {
+      slug,
+      url: requestUrl,
+      authenticated: !!authHeader,
+      status: response.status
+    });
+    
     if (!response.ok) {
-      throw new Error(`API request failed with status ${response.status}`);
+      // Try to get more information about the error
+      let errorDetails = '';
+      try {
+        const errorData = await response.text();
+        errorDetails = errorData.substring(0, 200); // First 200 chars for brevity
+      } catch (e) {
+        // Ignore if we can't get error details
+      }
+      
+      throw new Error(`API request failed with status ${response.status}: ${errorDetails}`);
     }
     
     const categories = await response.json();
@@ -256,13 +377,34 @@ export const getTags = async (): Promise<any[]> => {
       }
     };
 
+    console.log('Fetching tags with auth:', !!authHeader);
+    console.log('Tags request URL:', requestUrl);
+
     const response = await fetch(requestUrl, requestOptions);
     
+    // Log response details for debugging
+    console.log(`Tags API Response [${response.status}]:`, {
+      url: requestUrl,
+      authenticated: !!authHeader,
+      status: response.status
+    });
+    
     if (!response.ok) {
-      throw new Error(`API request failed with status ${response.status}`);
+      // Try to get more information about the error
+      let errorDetails = '';
+      try {
+        const errorData = await response.text();
+        errorDetails = errorData.substring(0, 200); // First 200 chars for brevity
+      } catch (e) {
+        // Ignore if we can't get error details
+      }
+      
+      throw new Error(`API request failed with status ${response.status}: ${errorDetails}`);
     }
     
-    return await response.json();
+    const tags = await response.json();
+    console.log(`Successfully fetched ${tags.length} tags`);
+    return tags;
   } catch (error) {
     console.error('Error fetching tags:', error);
     return [];

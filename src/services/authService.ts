@@ -67,18 +67,27 @@ export const createAuthHeader = (): { Authorization: string } | null => {
   const wpPassword = import.meta.env.VITE_WP_APP_PASSWORD;
   
   if (!wpUsername || !wpPassword) {
-    console.warn('WordPress API credentials not found in environment variables');
+    console.warn('🔐 Authentication Error: WordPress API credentials not found in environment variables');
     return null;
   }
   
   try {
     const credentials = `${wpUsername}:${wpPassword}`;
     const encodedCredentials = btoa(credentials);
-    return { 
+    const authHeader = { 
       Authorization: `Basic ${encodedCredentials}`
     };
+    
+    // Debug logging
+    console.log('🔐 Authentication: Created auth header successfully');
+    // Don't log the full header in production as it contains sensitive info
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔐 Auth header type:', authHeader.Authorization.split(' ')[0]);
+    }
+    
+    return authHeader;
   } catch (error) {
-    console.error('Error creating authentication header:', error);
+    console.error('🔐 Authentication Error: Failed to create auth header', error);
     return null;
   }
 };
@@ -91,35 +100,53 @@ export const testAuthentication = async (): Promise<boolean> => {
   const authHeader = createAuthHeader();
   
   if (!authHeader) {
-    console.error('No authentication header available to test');
+    console.error('🔐 Authentication Test: No authentication header available to test');
     return false;
   }
   
-  // For debugging only - REMOVE IN PRODUCTION
-  console.log('Testing authentication with header:', authHeader);
+  // Debug the current URL context
+  console.log('🔐 Authentication Test:');
+  console.log('  - Current URL:', window.location.href);
+  console.log('  - Testing with auth header:', !!authHeader);
   
   try {
     const baseUrl = import.meta.env.VITE_WP_API_BASE_URL || 'https://wpcms.thechief.com';
-    const response = await fetch(`${baseUrl}/wp-json/wp/v2/users/me`, {
+    const testUrl = `${baseUrl}/wp-json/wp/v2/users/me`;
+    
+    console.log('  - Testing URL:', testUrl);
+    
+    const response = await fetch(testUrl, {
       headers: {
         ...authHeader,
         'Content-Type': 'application/json'
       }
     });
     
-    // For debugging only - REMOVE IN PRODUCTION
-    console.log('Auth test response status:', response.status);
+    console.log('  - Response status:', response.status);
     
     if (response.ok) {
       const userData = await response.json();
-      console.log('Authentication successful, user data:', userData);
+      console.log('  - Authentication successful, user data:', userData);
       return true;
     } else {
-      console.error('Authentication failed with status:', response.status);
+      console.error('  - Authentication failed with status:', response.status);
+      // Try to get more info about the failure
+      try {
+        const errorData = await response.json();
+        console.error('  - Error details:', errorData);
+      } catch (e) {
+        // If we can't parse JSON, try to get the text
+        try {
+          const errorText = await response.text();
+          console.error('  - Error response:', errorText);
+        } catch (e2) {
+          console.error('  - Could not get error details');
+        }
+      }
       return false;
     }
   } catch (error) {
-    console.error('Error testing authentication:', error);
+    console.error('  - Error testing authentication:', error);
     return false;
   }
 };
