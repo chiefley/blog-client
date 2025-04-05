@@ -6,7 +6,6 @@ import {
     Box,
     Paper,
     Chip,
-    Divider,
     Avatar,
     Grid,
     CircularProgress,

@@ -4,13 +4,12 @@ import {
   TextField, 
   Button, 
   Grid, 
-  Paper,
   Typography,
   Alert,
   CircularProgress,
   Snackbar
 } from '@mui/material';
-import { getComments } from '../../services/wordpressApi';
+import { postComment } from '../../services/wordpressApi';
 
 interface CommentFormProps {
   postId: number;

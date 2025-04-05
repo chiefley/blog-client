@@ -2,11 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { 
   Box, 
   Typography, 
-  Divider, 
   CircularProgress, 
   Alert,
-  List,
-  ListItem
+  List
 } from '@mui/material';
 import { Comment } from '../../types/interfaces';
 import { getComments } from '../../services/wordpressApi';
@@ -60,6 +58,9 @@ const CommentList: React.FC<CommentListProps> = ({ postId }) => {
         // This is a reply
         const parentComment = commentMap.get(comment.parent);
         if (parentComment) {
+          if (!parentComment.replies) {
+            parentComment.replies = [];
+          }
           parentComment.replies.push(commentMap.get(comment.id)!);
         } else {
           // If parent doesn't exist (should not happen normally), treat as root

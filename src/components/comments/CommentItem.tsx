@@ -3,12 +3,8 @@ import {
   Box, 
   Typography, 
   Avatar, 
-  ListItem,
-  ListItemAvatar,
-  ListItemText,
   Button,
   Collapse,
-  Divider,
   Paper,
   List
 } from '@mui/material';
