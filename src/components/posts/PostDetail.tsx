@@ -40,6 +40,11 @@ const PostDetail: React.FC = () => {
                         console.log('Post _embedded data:', postData._embedded);
                     }
                     
+                    // Log Better Featured Image data if available
+                    if (postData.better_featured_image) {
+                        console.log('Better Featured Image data:', postData.better_featured_image);
+                    }
+                    
                     setPost(postData);
                 } else {
                     setError('Post not found');
@@ -111,8 +116,23 @@ const PostDetail: React.FC = () => {
     const hasTagIds = post.tags && post.tags.length > 0;
     const hasTagData = tags.length > 0;
 
-    // Get featured image (prefer the direct URL from the Better REST API Featured Image plugin)
-    const featuredImage = post.featured_media_url || post._embedded?.['wp:featuredmedia']?.[0]?.source_url;
+    // Get featured image with multiple fallbacks
+    const getFeaturedImage = () => {
+        // First check if better_featured_image is available
+        if (post.better_featured_image) {
+            return post.better_featured_image.source_url;
+        }
+        
+        // Then check for featured_media_url
+        if (post.featured_media_url) {
+            return post.featured_media_url;
+        }
+        
+        // Fall back to embedded media
+        return post._embedded?.['wp:featuredmedia']?.[0]?.source_url;
+    };
+
+    const featuredImage = getFeaturedImage();
 
     // Get author data
     const author = post._embedded?.author?.[0];

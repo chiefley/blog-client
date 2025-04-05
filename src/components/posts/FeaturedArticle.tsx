@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Typography, Paper, Button } from '@mui/material';
-import { styled } from '@mui/system'; // Add this import
+import { styled } from '@mui/system';
 import { Link as RouterLink } from 'react-router-dom';
 import { WordPressPost } from '../../types/interfaces';
 
@@ -8,7 +8,6 @@ interface FeaturedArticleProps {
   post: WordPressPost;
 }
 
-// Now define HeaderLabel after importing styled
 const HeaderLabel = styled(Box)(({ theme }) => ({
   position: 'relative',
   zIndex: 3,
@@ -20,7 +19,23 @@ const HeaderLabel = styled(Box)(({ theme }) => ({
 const FeaturedArticle: React.FC<FeaturedArticleProps> = ({ post }) => {
   // Get the featured image URL if available, or use a default
   const getFeaturedImage = () => {
-    // First check if featured_media_url is available (from Better REST API Featured Image plugin)
+    // First check if better_featured_image is available from the Better REST API Featured Image plugin
+    if (post.better_featured_image) {
+      // Try to get medium_large or medium size if available for hero image
+      if (post.better_featured_image.media_details?.sizes) {
+        if (post.better_featured_image.media_details.sizes.medium_large) {
+          return post.better_featured_image.media_details.sizes.medium_large.source_url;
+        }
+        if (post.better_featured_image.media_details.sizes.medium) {
+          return post.better_featured_image.media_details.sizes.medium.source_url;
+        }
+      }
+      
+      // Fall back to full size
+      return post.better_featured_image.source_url;
+    }
+    
+    // Check for featured_media_url (older way)
     if (post.featured_media_url) {
       return post.featured_media_url;
     }

@@ -5,7 +5,18 @@ import { PostCardProps, Category, Tag } from '../../types/interfaces';
 const PostCard = ({ post }: PostCardProps) => {
   // Get the featured image URL if available
   const getFeaturedImage = () => {
-    // First check if featured_media_url is available (from Better REST API Featured Image plugin)
+    // First check if better_featured_image is available from the Better REST API Featured Image plugin
+    if (post.better_featured_image) {
+      // Try to get medium size if available
+      if (post.better_featured_image.media_details?.sizes?.medium) {
+        return post.better_featured_image.media_details.sizes.medium.source_url;
+      }
+      
+      // Fall back to full size
+      return post.better_featured_image.source_url;
+    }
+    
+    // Check for featured_media_url (older way)
     if (post.featured_media_url) {
       return post.featured_media_url;
     }

@@ -51,9 +51,9 @@ export const getPosts = async (options: {
   params.append('page', page.toString());
   params.append('per_page', perPage.toString());
   
-  // With Better REST API Featured Image plugin, we can avoid embedding media
-  // when we only need the featured image URL, but we'll still request it for backward compatibility
-  params.append('_embed', 'author,wp:term');
+  // FIXED: Put back wp:featuredmedia since we need the embedded media as a fallback
+  // even with Better REST API Featured Image plugin installed
+  params.append('_embed', 'author,wp:featuredmedia,wp:term');
 
   // Handle either categoryId or categorySlug
   if (categoryId) {

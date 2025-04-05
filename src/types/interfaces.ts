@@ -12,8 +12,52 @@ export interface WordPressPost {
     protected: boolean;
   };
   date: string;
-  // New field added by Better REST API Featured Image plugin
+  // Field from Better REST API Featured Image plugin
   featured_media_url?: string;
+  // Alternative field provided by Better REST API Featured Image plugin
+  better_featured_image?: {
+    id: number;
+    alt_text: string;
+    caption: string;
+    description: string;
+    media_type: string;
+    media_details: {
+      width: number;
+      height: number;
+      file: string;
+      sizes: {
+        medium?: {
+          file: string;
+          width: number;
+          height: number;
+          mime_type: string;
+          source_url: string;
+        };
+        thumbnail?: {
+          file: string;
+          width: number;
+          height: number;
+          mime_type: string;
+          source_url: string;
+        };
+        medium_large?: {
+          file: string;
+          width: number;
+          height: number;
+          mime_type: string;
+          source_url: string;
+        };
+        full?: {
+          file: string;
+          width: number;
+          height: number;
+          mime_type: string;
+          source_url: string;
+        };
+      };
+    };
+    source_url: string;
+  };
   _embedded?: {
     author?: Array<{
       name?: string;
