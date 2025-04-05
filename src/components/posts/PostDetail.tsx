@@ -111,8 +111,8 @@ const PostDetail: React.FC = () => {
     const hasTagIds = post.tags && post.tags.length > 0;
     const hasTagData = tags.length > 0;
 
-    // Get featured image
-    const featuredImage = post._embedded?.['wp:featuredmedia']?.[0]?.source_url;
+    // Get featured image (prefer the direct URL from the Better REST API Featured Image plugin)
+    const featuredImage = post.featured_media_url || post._embedded?.['wp:featuredmedia']?.[0]?.source_url;
 
     // Get author data
     const author = post._embedded?.author?.[0];

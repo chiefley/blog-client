@@ -12,6 +12,8 @@ export interface WordPressPost {
     protected: boolean;
   };
   date: string;
+  // New field added by Better REST API Featured Image plugin
+  featured_media_url?: string;
   _embedded?: {
     author?: Array<{
       name?: string;

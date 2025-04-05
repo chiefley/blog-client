@@ -20,6 +20,12 @@ const HeaderLabel = styled(Box)(({ theme }) => ({
 const FeaturedArticle: React.FC<FeaturedArticleProps> = ({ post }) => {
   // Get the featured image URL if available, or use a default
   const getFeaturedImage = () => {
+    // First check if featured_media_url is available (from Better REST API Featured Image plugin)
+    if (post.featured_media_url) {
+      return post.featured_media_url;
+    }
+    
+    // Fall back to the embedded media if available
     if (post._embedded && post._embedded['wp:featuredmedia'] && post._embedded['wp:featuredmedia'][0]) {
       const media = post._embedded['wp:featuredmedia'][0];
       
