@@ -1,85 +1,104 @@
-// src/components/common/LazyImage.tsx
-import React, { useState } from 'react';
-import { Box, Skeleton, BoxProps } from '@mui/material';
+import React, { useState, useEffect, useRef } from 'react';
+import { Box, Skeleton } from '@mui/material';
 
-interface LazyImageProps extends BoxProps {
-  src: string; // Must provide a valid string (can be a fallback URL)
+interface LazyImageProps {
+  src: string;
   alt: string;
   width?: string | number;
   height?: string | number;
-  objectFit?: 'cover' | 'contain' | 'fill' | 'none' | 'scale-down';
-  fallbackSrc?: string;
-  loadingHeight?: number | string; // Custom height for the skeleton
-  borderRadius?: number | string; // Border radius for both image and skeleton
+  className?: string;
+  style?: React.CSSProperties;
 }
 
-const LazyImage: React.FC<LazyImageProps> = ({
-  src,
-  alt,
-  width = '100%',
-  height = 'auto',
-  objectFit = 'cover',
-  fallbackSrc = 'https://via.placeholder.com/300x200',
-  loadingHeight,
-  borderRadius,
-  sx,
-  ...boxProps
+const LazyImage: React.FC<LazyImageProps> = ({ 
+  src, 
+  alt, 
+  width = '100%', 
+  height = 'auto', 
+  className = '', 
+  style = {} 
 }) => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [isInView, setIsInView] = useState(false);
+  const imgRef = useRef<HTMLDivElement>(null);
 
-  const handleLoad = () => {
-    setIsLoading(false);
+  useEffect(() => {
+    // Set up the intersection observer
+    const observer = new IntersectionObserver(
+      (entries) => {
+        // When the image enters the viewport
+        if (entries[0].isIntersecting) {
+          setIsInView(true);
+          // Once we've triggered the load, we don't need to observe anymore
+          if (imgRef.current) observer.unobserve(imgRef.current);
+        }
+      },
+      {
+        rootMargin: '100px', // Start loading when image is 100px from viewport
+        threshold: 0.01
+      }
+    );
+
+    // Start observing the container
+    if (imgRef.current) {
+      observer.observe(imgRef.current);
+    }
+
+    // Clean up the observer when component unmounts
+    return () => {
+      if (imgRef.current) observer.unobserve(imgRef.current);
+    };
+  }, []);
+
+  // Function to handle image load
+  const handleImageLoad = () => {
+    console.log(`Image loaded: ${src}`);
+    setIsLoaded(true);
   };
 
-  const handleError = () => {
-    setIsLoading(false);
-    setError(true);
+  // Function to handle image error
+  const handleImageError = () => {
+    console.error(`Failed to load image: ${src}`);
+    // We still set isLoaded to true to remove the skeleton
+    setIsLoaded(true);
   };
-
-  // Height to use for the skeleton
-  const skeletonHeight = loadingHeight || height;
 
   return (
-    <Box
-      position="relative"
-      width={width}
-      height={isLoading ? skeletonHeight : height}
-      borderRadius={borderRadius}
-      overflow="hidden"
-      {...boxProps}
-      sx={{
-        ...sx,
-        transition: 'height 0.3s ease',
+    <Box 
+      ref={imgRef}
+      className={`lazy-image-container ${className}`}
+      sx={{ 
+        width, 
+        height, 
+        position: 'relative',
+        overflow: 'hidden',
+        ...style
       }}
     >
-      {/* Skeleton shown while loading */}
-      {isLoading && (
+      {!isLoaded && (
         <Skeleton 
-          variant="rectangular" 
-          width="100%" 
-          height="100%" 
+          variant="rectangular"
           animation="wave"
-          sx={{ borderRadius }} 
+          width="100%"
+          height="100%"
+          sx={{ position: 'absolute', top: 0, left: 0 }}
         />
       )}
-
-      {/* Actual image */}
-      <Box
-        component="img"
-        src={error ? fallbackSrc : src}
-        alt={alt}
-        loading="lazy"
-        onLoad={handleLoad}
-        onError={handleError}
-        sx={{
-          width: '100%',
-          height: '100%',
-          objectFit,
-          display: isLoading ? 'none' : 'block',
-          borderRadius
-        }}
-      />
+      
+      {isInView && (
+        <img
+          src={src}
+          alt={alt}
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            display: isLoaded ? 'block' : 'none',
+          }}
+          onLoad={handleImageLoad}
+          onError={handleImageError}
+        />
+      )}
     </Box>
   );
 };
