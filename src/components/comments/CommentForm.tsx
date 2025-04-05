@@ -1,14 +1,16 @@
+// src/components/comments/CommentForm.tsx
 import React, { useState } from 'react';
 import { 
-  Box, 
   TextField, 
   Button, 
   Grid, 
   Typography,
   Alert,
   CircularProgress,
-  Snackbar
+  Snackbar,
+  Paper
 } from '@mui/material';
+import SendIcon from '@mui/icons-material/Send';
 import { postComment } from '../../services/wordpressApi';
 
 interface CommentFormProps {
@@ -64,24 +66,47 @@ const CommentForm: React.FC<CommentFormProps> = ({
   };
 
   return (
-    <Box component="form" onSubmit={handleSubmit} sx={{ mb: 4 }}>
+    <Paper 
+      elevation={0} 
+      component="form" 
+      onSubmit={handleSubmit} 
+      sx={{ 
+        mb: 4, 
+        p: 3,
+        borderRadius: 2,
+        backgroundColor: parentId === 0 ? 'white' : 'background.default',
+        border: '1px solid',
+        borderColor: 'divider'
+      }}
+    >
       {parentId === 0 ? (
-        <Typography variant="h6" gutterBottom>
+        <Typography variant="h6" gutterBottom sx={{ 
+          fontWeight: 600,
+          color: 'primary.dark',
+          borderBottom: '2px solid',
+          borderColor: 'primary.light',
+          pb: 1,
+          mb: 2
+        }}>
           Leave a Comment
         </Typography>
       ) : (
-        <Typography variant="subtitle1" gutterBottom>
+        <Typography variant="subtitle1" gutterBottom sx={{ 
+          fontWeight: 600,
+          color: 'primary.dark',
+          pb: 1
+        }}>
           Reply to comment
         </Typography>
       )}
       
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
+        <Alert severity="error" sx={{ mb: 3, borderRadius: 1 }}>
           {error}
         </Alert>
       )}
       
-      <Grid container spacing={2}>
+      <Grid container spacing={3}>
         <Grid item xs={12}>
           <TextField
             fullWidth
@@ -92,6 +117,15 @@ const CommentForm: React.FC<CommentFormProps> = ({
             onChange={(e) => setComment(e.target.value)}
             required
             disabled={submitting}
+            variant="outlined"
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 1,
+                '&:hover fieldset': {
+                  borderColor: 'primary.main',
+                },
+              },
+            }}
           />
         </Grid>
         <Grid item xs={12} sm={6}>
@@ -102,6 +136,15 @@ const CommentForm: React.FC<CommentFormProps> = ({
             onChange={(e) => setName(e.target.value)}
             required
             disabled={submitting}
+            variant="outlined"
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 1,
+                '&:hover fieldset': {
+                  borderColor: 'primary.main',
+                },
+              },
+            }}
           />
         </Grid>
         <Grid item xs={12} sm={6}>
@@ -114,15 +157,39 @@ const CommentForm: React.FC<CommentFormProps> = ({
             required
             disabled={submitting}
             helperText="Your email won't be published"
+            variant="outlined"
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 1,
+                '&:hover fieldset': {
+                  borderColor: 'primary.main',
+                },
+              },
+              '& .MuiFormHelperText-root': {
+                fontSize: '0.75rem',
+                fontStyle: 'italic',
+                mt: 0.5
+              }
+            }}
           />
         </Grid>
-        <Grid item xs={12}>
+        <Grid item xs={12} sx={{ mt: 1 }}>
           <Button
             type="submit"
             variant="contained"
             color="primary"
             disabled={submitting}
-            startIcon={submitting ? <CircularProgress size={20} /> : undefined}
+            startIcon={submitting ? <CircularProgress size={20} /> : <SendIcon />}
+            sx={{ 
+              py: 1,
+              px: 3,
+              borderRadius: 1.5,
+              fontWeight: 600,
+              boxShadow: 1,
+              '&:hover': {
+                boxShadow: 2
+              }
+            }}
           >
             {submitting ? 'Submitting...' : 'Submit Comment'}
           </Button>
@@ -135,7 +202,7 @@ const CommentForm: React.FC<CommentFormProps> = ({
         onClose={() => setSuccess(false)}
         message="Comment submitted successfully"
       />
-    </Box>
+    </Paper>
   );
 };
 
