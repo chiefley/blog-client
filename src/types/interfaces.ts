@@ -122,3 +122,33 @@ export interface Tag {
   taxonomy?: string; // Added taxonomy property
   parent?: number;   // Some tags might have a parent property
 }
+
+// Interface for WordPress comment objects
+export interface Comment {
+  id: number;
+  post: number;
+  parent: number;
+  author: number;
+  author_name: string;
+  author_url: string;
+  author_avatar_urls?: {
+    [key: string]: string;
+  };
+  date: string;
+  content: {
+    rendered: string;
+  };
+  status: string;
+  type: string;
+  replies?: Comment[]; // For hierarchical display
+}
+
+// Interface for comment submission data
+export interface CommentData {
+  post: number;
+  parent: number;
+  content: string;
+  author_name: string;
+  author_email: string;
+  author_url?: string;
+}

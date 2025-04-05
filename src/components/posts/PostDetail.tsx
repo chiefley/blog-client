@@ -19,6 +19,7 @@ import { WordPressPost } from '../../types/interfaces';
 import parse from 'html-react-parser';
 import LazyImage from '../common/LazyImage';
 import { getResponsiveImageUrl } from '../../utils/imageUtils';
+import { Comments } from '../comments';
 
 const PostDetail: React.FC = () => {
     const { slug } = useParams<{ slug: string }>();
@@ -342,15 +343,9 @@ const PostDetail: React.FC = () => {
                 </Box>
             </Paper>
 
-            {/* Comments section placeholder */}
+            {/* Comments section */}
             <Paper sx={{ p: { xs: 2, md: 4 }, borderRadius: 2 }}>
-                <Typography variant="h5" gutterBottom>
-                    Comments
-                </Typography>
-                <Divider sx={{ mb: 2 }} />
-                <Typography variant="body2" color="text.secondary">
-                    Comments functionality will be implemented in a future update.
-                </Typography>
+                <Comments postId={post.id} />
             </Paper>
         </Box>
     );

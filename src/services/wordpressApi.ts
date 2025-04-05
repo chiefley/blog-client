@@ -1,5 +1,5 @@
 // src/services/wordpressApi.ts
-import { WordPressPost, Category } from '../types/interfaces';
+import { WordPressPost, Category, Comment, CommentData } from '../types/interfaces';
 import { createAuthHeader } from './authService';
 import { getCurrentBlogPath } from '../config/multisiteConfig';
 
@@ -352,5 +352,121 @@ export const getTags = async (): Promise<any[]> => {
   } catch (error) {
     console.error('Error fetching tags:', error);
     return [];
+  }
+};
+
+/**
+ * Get comments for a specific post
+ */
+export const getComments = async (postId: number): Promise<Comment[]> => {
+  const apiUrl = getApiUrl();
+  const requestUrl = `${apiUrl}/comments?post=${postId}&orderby=date&order=asc&per_page=100`;
+  
+  try {
+    // Get authentication header from authService
+    const authHeader = createAuthHeader();
+    
+    // Create request options with auth header
+    const requestOptions: RequestInit = {
+      headers: {
+        'Content-Type': 'application/json',
+        ...(authHeader || {})
+      }
+    };
+
+    console.log('Fetching comments for post:', postId);
+    console.log('Request URL:', requestUrl);
+    console.log('With auth header:', !!authHeader);
+
+    const response = await fetch(requestUrl, requestOptions);
+    
+    console.log(`Comments API Response [${response.status}]:`, {
+      postId,
+      url: requestUrl,
+      authenticated: !!authHeader,
+      status: response.status
+    });
+    
+    if (!response.ok) {
+      // Try to get more information about the error
+      let errorDetails = '';
+      try {
+        const errorData = await response.text();
+        errorDetails = errorData.substring(0, 200); // First 200 chars for brevity
+      } catch (e) {
+        // Ignore if we can't get error details
+      }
+      
+      throw new Error(`API request failed with status ${response.status}: ${errorDetails}`);
+    }
+    
+    const comments = await response.json();
+    console.log(`Successfully fetched ${comments.length} comments for post ${postId}`);
+    return comments;
+  } catch (error) {
+    console.error('Error fetching comments:', error);
+    return [];
+  }
+};
+
+/**
+ * Post a new comment
+ */
+export const postComment = async (commentData: CommentData): Promise<Comment | null> => {
+  const apiUrl = getApiUrl();
+  const requestUrl = `${apiUrl}/comments`;
+  
+  try {
+    // Get authentication header from authService
+    const authHeader = createAuthHeader();
+    
+    // Create request options with auth header and comment data
+    const requestOptions: RequestInit = {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(authHeader || {})
+      },
+      body: JSON.stringify(commentData)
+    };
+
+    console.log('Posting comment for post:', commentData.post);
+    console.log('Request URL:', requestUrl);
+    console.log('With auth header:', !!authHeader);
+
+    const response = await fetch(requestUrl, requestOptions);
+    
+    console.log(`Post Comment API Response [${response.status}]:`, {
+      postId: commentData.post,
+      url: requestUrl,
+      authenticated: !!authHeader,
+      status: response.status
+    });
+    
+    if (!response.ok) {
+      // Try to get more information about the error
+      let errorDetails = '';
+      try {
+        const errorData = await response.json();
+        errorDetails = JSON.stringify(errorData).substring(0, 200); // First 200 chars for brevity
+      } catch (e) {
+        // If JSON parsing fails, try to get text
+        try {
+          const errorText = await response.text();
+          errorDetails = errorText.substring(0, 200); // First 200 chars for brevity
+        } catch (e2) {
+          // Ignore if we can't get error details
+        }
+      }
+      
+      throw new Error(`API request failed with status ${response.status}: ${errorDetails}`);
+    }
+    
+    const newComment = await response.json();
+    console.log('Successfully posted comment');
+    return newComment;
+  } catch (error) {
+    console.error('Error posting comment:', error);
+    throw error; // Re-throw to handle in UI
   }
 };
