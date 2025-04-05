@@ -4,7 +4,8 @@ import { Box, Typography, Paper, Button } from '@mui/material';
 import { styled } from '@mui/system';
 import { Link as RouterLink } from 'react-router-dom';
 import { WordPressPost } from '../../types/interfaces';
-import LazyImage from '../common/LazyImage'; // Import the LazyImage component
+import LazyImage from '../common/LazyImage'; 
+import { getResponsiveImageUrl } from '../../utils/imageUtils';
 
 interface FeaturedArticleProps {
   post: WordPressPost;
@@ -89,6 +90,14 @@ const FeaturedArticle: React.FC<FeaturedArticleProps> = ({ post }) => {
   const author = getAuthorName();
   const featuredImageUrl = getFeaturedImage();
   
+  // Make the image URL responsive with Optimole if available
+  const responsiveImageUrl = featuredImageUrl ? getResponsiveImageUrl(featuredImageUrl, {
+    mobile: { width: 480, height: 250 },
+    tablet: { width: 768, height: 300 },
+    desktop: { width: 1200, height: 400 },
+    quality: 85
+  }) : '';
+  
   return (
     <Paper 
       elevation={3}
@@ -126,7 +135,7 @@ const FeaturedArticle: React.FC<FeaturedArticleProps> = ({ post }) => {
         }}
       >
         <LazyImage 
-          src={featuredImageUrl || 'https://via.placeholder.com/1200x500'}
+          src={responsiveImageUrl || 'https://via.placeholder.com/1200x500'}
           alt={post.title.rendered}
           height="100%"
           width="100%"

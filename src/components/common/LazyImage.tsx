@@ -8,6 +8,10 @@ interface LazyImageProps {
   height?: string | number;
   className?: string;
   style?: React.CSSProperties;
+  objectFit?: string;
+  borderRadius?: number | string;
+  loadingHeight?: string | number;
+  fallbackSrc?: string;
 }
 
 const LazyImage: React.FC<LazyImageProps> = ({ 
@@ -16,10 +20,15 @@ const LazyImage: React.FC<LazyImageProps> = ({
   width = '100%', 
   height = 'auto', 
   className = '', 
-  style = {} 
+  style = {},
+  objectFit = 'cover',
+  borderRadius = 0,
+  loadingHeight = height,
+  fallbackSrc = 'https://via.placeholder.com/800x600'
 }) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isInView, setIsInView] = useState(false);
+  const [imgSrc, setImgSrc] = useState<string>(src);
   const imgRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -50,15 +59,23 @@ const LazyImage: React.FC<LazyImageProps> = ({
     };
   }, []);
 
+  // Update src if prop changes
+  useEffect(() => {
+    setImgSrc(src);
+  }, [src]);
+
   // Function to handle image load
   const handleImageLoad = () => {
-    console.log(`Image loaded: ${src}`);
     setIsLoaded(true);
   };
 
   // Function to handle image error
   const handleImageError = () => {
-    console.error(`Failed to load image: ${src}`);
+    console.error(`Failed to load image: ${imgSrc}`);
+    // Use fallback image if the original fails
+    if (imgSrc !== fallbackSrc) {
+      setImgSrc(fallbackSrc);
+    }
     // We still set isLoaded to true to remove the skeleton
     setIsLoaded(true);
   };
@@ -72,6 +89,7 @@ const LazyImage: React.FC<LazyImageProps> = ({
         height, 
         position: 'relative',
         overflow: 'hidden',
+        borderRadius,
         ...style
       }}
     >
@@ -80,20 +98,26 @@ const LazyImage: React.FC<LazyImageProps> = ({
           variant="rectangular"
           animation="wave"
           width="100%"
-          height="100%"
-          sx={{ position: 'absolute', top: 0, left: 0 }}
+          height={loadingHeight || "100%"}
+          sx={{ 
+            position: 'absolute', 
+            top: 0, 
+            left: 0,
+            borderRadius
+          }}
         />
       )}
       
       {isInView && (
         <img
-          src={src}
+          src={imgSrc}
           alt={alt}
           style={{
             width: '100%',
             height: '100%',
-            objectFit: 'cover',
+            objectFit: objectFit as any,
             display: isLoaded ? 'block' : 'none',
+            borderRadius
           }}
           onLoad={handleImageLoad}
           onError={handleImageError}

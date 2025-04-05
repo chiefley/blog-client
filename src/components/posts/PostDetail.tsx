@@ -17,7 +17,8 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { getPostBySlug } from '../../services/wordpressApi';
 import { WordPressPost } from '../../types/interfaces';
 import parse from 'html-react-parser';
-import LazyImage from '../common/LazyImage'; // Import the LazyImage component
+import LazyImage from '../common/LazyImage';
+import { getResponsiveImageUrl } from '../../utils/imageUtils';
 
 const PostDetail: React.FC = () => {
     const { slug } = useParams<{ slug: string }>();
@@ -36,16 +37,6 @@ const PostDetail: React.FC = () => {
                 const postData = await getPostBySlug(slug);
                 
                 if (postData) {
-                    // Log embedded data to check structure
-                    if (postData._embedded) {
-                        console.log('Post _embedded data:', postData._embedded);
-                    }
-                    
-                    // Log Better Featured Image data if available
-                    if (postData.better_featured_image) {
-                        console.log('Better Featured Image data:', postData.better_featured_image);
-                    }
-                    
                     setPost(postData);
                 } else {
                     setError('Post not found');
@@ -73,10 +64,18 @@ const PostDetail: React.FC = () => {
                     const width = domNode.attribs?.width;
                     const height = domNode.attribs?.height;
                     
+                    // Process with Optimole if present - src is already checked for empty string
+                    const responsiveImageUrl = getResponsiveImageUrl(src, {
+                        mobile: { width: 480 },
+                        tablet: { width: 768 },
+                        desktop: { width: 1200 },
+                        quality: 80
+                    });
+                    
                     // Add loading="lazy" attribute to enable native lazy loading
                     return (
                         <img 
-                            src={src} 
+                            src={responsiveImageUrl}
                             alt={alt} 
                             width={width} 
                             height={height}
@@ -165,6 +164,14 @@ const PostDetail: React.FC = () => {
     };
 
     const featuredImage = getFeaturedImage();
+    
+    // Optimize featured image with Optimole if available
+    const responsiveFeaturedImage = featuredImage ? getResponsiveImageUrl(featuredImage, {
+        mobile: { width: 480, height: 250 },
+        tablet: { width: 768, height: 300 },
+        desktop: { width: 1200, height: 500 },
+        quality: 90
+    }) : '';
 
     // Get author data
     const author = post._embedded?.author?.[0];
@@ -228,11 +235,11 @@ const PostDetail: React.FC = () => {
                     </Grid>
                 </Box>
 
-                {/* Featured image - Now using LazyImage */}
+                {/* Featured image - Now using LazyImage with Optimole */}
                 {featuredImage ? (
                     <Box sx={{ mb: 4 }}>
                         <LazyImage
-                            src={featuredImage}
+                            src={responsiveFeaturedImage}
                             alt={title}
                             width="100%"
                             height={250}

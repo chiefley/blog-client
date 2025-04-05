@@ -2,7 +2,8 @@
 import { Card, CardContent, Box, Typography, Avatar, Chip } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import { PostCardProps, Category, Tag } from '../../types/interfaces';
-import LazyImage from '../common/LazyImage'; // Import the LazyImage component
+import LazyImage from '../common/LazyImage';
+import { getResponsiveImageUrl } from '../../utils/imageUtils';
 
 const PostCard = ({ post }: PostCardProps) => {
   // Get the featured image URL if available
@@ -84,6 +85,14 @@ const PostCard = ({ post }: PostCardProps) => {
   const date = new Date(post.date).toLocaleDateString();
   const featuredImageUrl = getFeaturedImage();
   
+  // Make the image URL responsive with Optimole if available
+  const responsiveImageUrl = featuredImageUrl ? getResponsiveImageUrl(featuredImageUrl, {
+    mobile: { width: 400, height: 200 },
+    tablet: { width: 300, height: 200 },
+    desktop: { width: 400, height: 240 },
+    quality: 80
+  }) : '';
+  
   // Get comment count (safely)
   const commentCount = post.comment_count || 0;
   
@@ -116,12 +125,13 @@ const PostCard = ({ post }: PostCardProps) => {
         }}
       >
         <LazyImage
-          src={featuredImageUrl || 'https://via.placeholder.com/300x200'}
+          src={responsiveImageUrl || 'https://via.placeholder.com/300x200'}
           alt={post.title.rendered}
           height="100%"
           width="100%"
           objectFit="cover"
           loadingHeight="100%"
+          fallbackSrc="https://via.placeholder.com/300x200"
         />
       </Box>
       
@@ -182,9 +192,8 @@ const PostCard = ({ post }: PostCardProps) => {
               color: 'primary.main'
             }
           }}
-        >
-          {post.title.rendered}
-        </Typography>
+          dangerouslySetInnerHTML={{ __html: post.title.rendered }}
+        />
         
         <Box 
           dangerouslySetInnerHTML={{ __html: post.excerpt.rendered }} 
