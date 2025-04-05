@@ -1,8 +1,10 @@
+// src/components/posts/FeaturedArticle.tsx
 import React from 'react';
 import { Box, Typography, Paper, Button } from '@mui/material';
 import { styled } from '@mui/system';
 import { Link as RouterLink } from 'react-router-dom';
 import { WordPressPost } from '../../types/interfaces';
+import LazyImage from '../common/LazyImage'; // Import the LazyImage component
 
 interface FeaturedArticleProps {
   post: WordPressPost;
@@ -85,6 +87,7 @@ const FeaturedArticle: React.FC<FeaturedArticleProps> = ({ post }) => {
 
   const categories = getCategories();
   const author = getAuthorName();
+  const featuredImageUrl = getFeaturedImage();
   
   return (
     <Paper 
@@ -101,7 +104,7 @@ const FeaturedArticle: React.FC<FeaturedArticleProps> = ({ post }) => {
         }
       }}
     >
-      {/* Background image with overlay gradient */}
+      {/* Background image with overlay gradient - Now using LazyImage */}
       <Box 
         component="div"
         sx={{
@@ -110,9 +113,6 @@ const FeaturedArticle: React.FC<FeaturedArticleProps> = ({ post }) => {
           left: 0,
           width: '100%',
           height: '100%',
-          backgroundImage: `url(${getFeaturedImage()})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
           '&::after': {
             content: '""',
             position: 'absolute',
@@ -121,9 +121,19 @@ const FeaturedArticle: React.FC<FeaturedArticleProps> = ({ post }) => {
             width: '100%',
             height: '100%',
             background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0.1) 100%)',
+            zIndex: 1
           }
         }}
-      />
+      >
+        <LazyImage 
+          src={featuredImageUrl || 'https://via.placeholder.com/1200x500'}
+          alt={post.title.rendered}
+          height="100%"
+          width="100%"
+          objectFit="cover"
+          fallbackSrc="https://via.placeholder.com/1200x500"
+        />
+      </Box>
 
       {/* Featured Article Label */}
       <HeaderLabel>
@@ -151,7 +161,7 @@ const FeaturedArticle: React.FC<FeaturedArticleProps> = ({ post }) => {
           width: '100%',
           p: { xs: 2, md: 3 }, // Reduced padding
           color: 'white',
-          zIndex: 1
+          zIndex: 2
         }}
       >
         {/* Categories */}

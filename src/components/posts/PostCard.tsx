@@ -1,6 +1,8 @@
-import { Card, CardContent, CardMedia, Typography, Box, Avatar, Chip } from '@mui/material';
+// src/components/posts/PostCard.tsx
+import { Card, CardContent, Box, Typography, Avatar, Chip } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import { PostCardProps, Category, Tag } from '../../types/interfaces';
+import LazyImage from '../common/LazyImage'; // Import the LazyImage component
 
 const PostCard = ({ post }: PostCardProps) => {
   // Get the featured image URL if available
@@ -80,6 +82,7 @@ const PostCard = ({ post }: PostCardProps) => {
   const categories = getCategories();
   const tags = getTags();
   const date = new Date(post.date).toLocaleDateString();
+  const featuredImageUrl = getFeaturedImage();
   
   // Get comment count (safely)
   const commentCount = post.comment_count || 0;
@@ -95,23 +98,33 @@ const PostCard = ({ post }: PostCardProps) => {
         boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
       }
     }}>
-      <CardMedia
+      {/* Using LazyImage component instead of CardMedia */}
+      <Box
         component={RouterLink}
         to={`/post/${post.slug}`}
         sx={{
           width: { xs: '100%', sm: '30%' },
           height: { xs: '200px', sm: 'auto' },
           minHeight: { sm: '240px' },
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
+          position: 'relative',
+          overflow: 'hidden',
+          textDecoration: 'none',
           transition: 'opacity 0.2s',
           '&:hover': {
             opacity: 0.9
           }
         }}
-        image={getFeaturedImage()}
-        title={post.title.rendered}
-      />
+      >
+        <LazyImage
+          src={featuredImageUrl || 'https://via.placeholder.com/300x200'}
+          alt={post.title.rendered}
+          height="100%"
+          width="100%"
+          objectFit="cover"
+          loadingHeight="100%"
+        />
+      </Box>
+      
       <CardContent sx={{ flex: '1', display: 'flex', flexDirection: 'column' }}>
         <Box sx={{ mb: 1, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
           {/* Categories */}

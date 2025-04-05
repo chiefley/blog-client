@@ -1,3 +1,4 @@
+// src/components/posts/PostDetail.tsx
 import React, { useState, useEffect } from 'react';
 import { useParams, Link as RouterLink } from 'react-router-dom';
 import {
@@ -10,13 +11,13 @@ import {
     Grid,
     CircularProgress,
     Alert,
-    Button,
-    CardMedia
+    Button
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { getPostBySlug } from '../../services/wordpressApi';
 import { WordPressPost } from '../../types/interfaces';
 import parse from 'html-react-parser';
+import LazyImage from '../common/LazyImage'; // Import the LazyImage component
 
 const PostDetail: React.FC = () => {
     const { slug } = useParams<{ slug: string }>();
@@ -59,6 +60,37 @@ const PostDetail: React.FC = () => {
 
         fetchPost();
     }, [slug]);
+
+    // Function to enhance the post content with lazy loading for images
+    const enhanceContent = (content: string): React.ReactNode => {
+        // Use a simple regex to identify img tags
+        const parsed = parse(content, {
+            replace: (domNode) => {
+                if (domNode.type === 'tag' && domNode.name === 'img') {
+                    // Extract attributes from the img tag
+                    const src = domNode.attribs?.src || '';
+                    const alt = domNode.attribs?.alt || '';
+                    const width = domNode.attribs?.width;
+                    const height = domNode.attribs?.height;
+                    
+                    // Add loading="lazy" attribute to enable native lazy loading
+                    return (
+                        <img 
+                            src={src} 
+                            alt={alt} 
+                            width={width} 
+                            height={height}
+                            loading="lazy"
+                            style={{ maxWidth: '100%', height: 'auto' }}
+                        />
+                    );
+                }
+                return domNode;
+            }
+        });
+        
+        return parsed;
+    };
 
     if (loading) {
         return (
@@ -196,24 +228,22 @@ const PostDetail: React.FC = () => {
                     </Grid>
                 </Box>
 
-                {/* Featured image */}
-                {featuredImage && (
+                {/* Featured image - Now using LazyImage */}
+                {featuredImage ? (
                     <Box sx={{ mb: 4 }}>
-                        <CardMedia
-                            component="img"
-                            image={featuredImage}
+                        <LazyImage
+                            src={featuredImage}
                             alt={title}
-                            sx={{
-                                width: '100%',
-                                maxHeight: 250,
-                                objectFit: 'cover',
-                                borderRadius: 1
-                            }}
+                            width="100%"
+                            height={250}
+                            objectFit="cover"
+                            borderRadius={1}
+                            loadingHeight={250}
                         />
                     </Box>
-                )}
+                ) : null}
 
-                {/* Post content */}
+                {/* Post content with enhanced image loading */}
                 <Box sx={{ 
                     '& img': { maxWidth: '100%', height: 'auto', borderRadius: 1 },
                     '& figure': { margin: '1rem 0' },
@@ -241,7 +271,7 @@ const PostDetail: React.FC = () => {
                         mb: 0.5
                     }
                 }}>
-                    {parse(content)}
+                    {enhanceContent(content)}
                 </Box>
 
                 {/* Tags - always show section with appropriate message if no tags */}
