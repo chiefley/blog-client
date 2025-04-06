@@ -192,8 +192,9 @@ const PostDetail: React.FC = () => {
             <Paper sx={{ p: { xs: 2, md: 4 }, mb: 4, borderRadius: 2 }}>
                 {/* Post header */}
                 <Box sx={{ mb: 3 }}>
-                    {/* Categories */}
-                    <Box sx={{ mb: 2, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {/* Categories and Tags in a single row */}
+                    <Box sx={{ mb: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                        {/* Categories */}
                         {categories.map((category: any) => (
                             <Chip
                                 key={`cat-${category.id}`}
@@ -203,6 +204,26 @@ const PostDetail: React.FC = () => {
                                 size="small"
                                 color="primary"
                                 clickable
+                            />
+                        ))}
+                        
+                        {/* Tags - styled similar to PostCard.tsx */}
+                        {tags.map((tag: any) => (
+                            <Chip
+                                key={`tag-${tag.id}`}
+                                label={tag.name}
+                                component={RouterLink}
+                                to={`/posts/tag/${tag.slug}`}
+                                size="small"
+                                variant="outlined"
+                                clickable
+                                sx={{
+                                    borderColor: 'text.secondary',
+                                    '&:hover': {
+                                        backgroundColor: 'action.hover',
+                                        borderColor: 'primary.light'
+                                    }
+                                }}
                             />
                         ))}
                     </Box>
@@ -281,7 +302,7 @@ const PostDetail: React.FC = () => {
                     {enhanceContent(content)}
                 </Box>
 
-                {/* Tags - always show section with appropriate message if no tags */}
+                {/* Tags at the bottom - keep for reference */}
                 <Box sx={{ mt: 4 }}>
                     <Typography variant="h6" gutterBottom>
                         Tags

@@ -10,6 +10,7 @@ import {
 import PostList from '../components/posts/PostList';
 import { WordPressPost } from '../types/interfaces';
 import { createAuthHeader } from '../services/authService';
+import { getApiUrl } from '../services/wordpressApi';
 
 const TagPosts = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -29,9 +30,10 @@ const TagPosts = () => {
       }
 
       try {
-        // Get authentication header
+        // Use the getApiUrl function to get the correct base URL for the current blog
+        const apiUrl = getApiUrl();
         const authHeader = createAuthHeader();
-
+        
         // Create request options with auth header
         const requestOptions: RequestInit = {
           headers: {
@@ -41,8 +43,7 @@ const TagPosts = () => {
         };
 
         // First get tag information
-        const baseUrl = 'https://wpcms.thechief.com';
-        const tagResponse = await fetch(`${baseUrl}/wp-json/wp/v2/tags?slug=${slug}`, requestOptions);
+        const tagResponse = await fetch(`${apiUrl}/tags?slug=${slug}`, requestOptions);
         
         if (!tagResponse.ok) {
           throw new Error(`Error fetching tag info: ${tagResponse.status}`);
@@ -59,8 +60,8 @@ const TagPosts = () => {
         const tagId = tagData[0].id;
         setTagName(tagData[0].name);
         
-        // Directly fetch posts with this tag
-        const postsUrl = `${baseUrl}/wp-json/wp/v2/posts?tags=${tagId}&_embed=true&page=${currentPage}&per_page=10`;
+        // Directly fetch posts with this tag using the same API URL
+        const postsUrl = `${apiUrl}/posts?tags=${tagId}&_embed=true&page=${currentPage}&per_page=10`;
         
         console.log('Fetching tag posts with URL:', postsUrl);
         console.log('Using auth header:', !!authHeader);

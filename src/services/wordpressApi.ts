@@ -9,7 +9,7 @@ const API_BASE_URL = import.meta.env.VITE_WP_API_BASE_URL || 'https://wpcms.thec
 /**
  * Construct the full API URL for the current blog
  */
-const getApiUrl = (): string => {
+export const getApiUrl = (): string => {
   const blogPath = getCurrentBlogPath();
   let apiUrl = `${API_BASE_URL}`;
   

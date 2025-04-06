@@ -71,6 +71,14 @@ const FeaturedArticle: React.FC<FeaturedArticleProps> = ({ post }) => {
     return [];
   };
 
+  // Get tags for the post
+  const getTags = () => {
+    if (post._embedded && post._embedded['wp:term'] && post._embedded['wp:term'][1]) {
+      return post._embedded['wp:term'][1];
+    }
+    return [];
+  };
+
   // Format the post date
   const formattedDate = new Date(post.date).toLocaleDateString('en-US', {
     year: 'numeric',
@@ -87,6 +95,7 @@ const FeaturedArticle: React.FC<FeaturedArticleProps> = ({ post }) => {
   };
 
   const categories = getCategories();
+  const tags = getTags();
   const author = getAuthorName();
   const featuredImageUrl = getFeaturedImage();
   
@@ -173,11 +182,12 @@ const FeaturedArticle: React.FC<FeaturedArticleProps> = ({ post }) => {
           zIndex: 2
         }}
       >
-        {/* Categories */}
+        {/* Categories and Tags */}
         <Box sx={{ display: 'flex', gap: 1, mb: 1, flexWrap: 'wrap' }}>
+          {/* Categories */}
           {categories.map((category: any) => (
             <Box 
-              key={category.id}
+              key={`cat-${category.id}`}
               component={RouterLink}
               to={`/posts/category/${category.slug}`}
               sx={{
@@ -196,6 +206,32 @@ const FeaturedArticle: React.FC<FeaturedArticleProps> = ({ post }) => {
               }}
             >
               {category.name}
+            </Box>
+          ))}
+          
+          {/* Tags - show up to 2 tags on the featured article */}
+          {tags.slice(0, 2).map((tag: any) => (
+            <Box 
+              key={`tag-${tag.id}`}
+              component={RouterLink}
+              to={`/posts/tag/${tag.slug}`}
+              sx={{
+                border: '1px solid',
+                borderColor: 'divider',
+                color: 'text.secondary',
+                bgcolor: 'rgba(255, 255, 255, 0.9)',
+                py: 0.5,
+                px: 1.5,
+                borderRadius: 1,
+                fontSize: '0.75rem',
+                textDecoration: 'none',
+                '&:hover': {
+                  borderColor: 'primary.light',
+                  bgcolor: 'rgba(255, 255, 255, 0.7)'
+                }
+              }}
+            >
+              {tag.name}
             </Box>
           ))}
         </Box>
