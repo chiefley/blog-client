@@ -39,7 +39,7 @@ I have very little front-end experience except for Winforms and Blazor.  I have 
 - Leveraging TypeScript interfaces for WordPress API responses
 - Incremental development with component-based approach
 - Github repository setup and check-ins via Visual Code.
-- Development is done in dev branch.  Periodic merges to main branch.
+- Development is done in main branch.  Periodic merges to release branch.
 - Chats and resource under the XBlog project in Claude.ai
 - Chats usually are loaded with src folder from Git repository.
 - All client development is done by Claude.
