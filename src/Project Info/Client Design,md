@@ -1,0 +1,67 @@
+# Blog Network Design Summary
+
+## Project Overview
+This document summarizes the design decisions for a React-based blog network that uses WordPress as a headless CMS.
+
+## Styling Framework.
+- Uses the official Material UI React component library
+- Styling is handled through Material UI's built-in styling system (which uses Emotion or styled-components under the hood)
+- Does NOT use Tailwind CSS at all
+
+## Design Decisions
+
+### Layout Structure
+- **Left sidebar** containing:
+  - Search functionality
+  - Hierarchical categories list with post counts
+  - Tags cloud with post counts.
+  - Admin links section
+- **Single-column main content area**
+- **Responsive design** that adjusts for mobile devices (sidebar collapses to a drawer)
+
+### Post Preview Style
+- **Horizontal card layout** with image on the left and content on the right
+- Each card includes:
+  - Featured image (1/3 width on desktop)
+  - Category
+  - Tags
+  - Post title
+  - Excerpt text
+  - Author info with avatar
+  - Comment count
+- Single column of these previews rather than a grid layout
+
+### Featured Content
+- Large hero section at the top with overlay text for featured posts
+- Full-width image with gradient overlay for text readability
+
+### Individual Post View
+- Shows featured image,
+- Chips for Categories and Tags
+- Post Title
+- Maintains the same sidebar for consistent navigation
+- Full content area with rich text formatting
+- Author bio section at the bottom
+- Comments section using WordPress Native Comments
+
+## Featured Image
+  - Uses information provided by Better REST Featured Image plugin.
+  - Lazy loading of all images.
+
+### Visual Style
+- Clean, modern aesthetic using blue as the primary color
+- White cards on light gray background for content
+- Subtle shadows and rounded corners for depth
+- Tag-based navigation with visual indicators
+
+## API Access
+- All api structures specified in an interface.ts file.
+- All requests and responses go through a single wordpressApi.ts file.
+- Auth is handled by an authService.ts.
+
+### Mobile Considerations
+- Sidebar collapses to a toggle-able drawer on mobile devices
+- Post previews stack vertically (image above content) on small screens
+- Responsive typography that adjusts size based on viewport
+- Touch-friendly tap targets for navigation
+
