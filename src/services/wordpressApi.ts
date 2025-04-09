@@ -460,7 +460,7 @@ export const postComment = async (commentData: CommentData): Promise<Comment | n
       }
       
       throw new Error(`API request failed with status ${response.status}: ${errorDetails}`);
-    }
+    } 
     
     const newComment = await response.json();
     console.log('Successfully posted comment');
