@@ -1,5 +1,19 @@
 {
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
+  ],
+
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "destination": "https://$1",
+      "permanent": true,
+      "has": [
+        {
+          "type": "host",
+          "value": "your-domain.com"
+        }
+      ]
+    }
   ]
 }
