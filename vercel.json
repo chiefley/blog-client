@@ -14,6 +14,28 @@
           "value": "thechief.com"
         }
       ]
+    },
+    {
+      "source": "/(.*)",
+      "destination": "https://$1",
+      "permanent": true,
+      "has": [
+        {
+          "type": "host",
+          "value": "wa1x.thechief.com"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "destination": "https://$1",
+      "permanent": true,
+      "has": [
+        {
+          "type": "host",
+          "value": "applefinch.thechief.com"
+        }
+      ]
     }
   ]
 }
