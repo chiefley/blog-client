@@ -21,6 +21,9 @@ I have very little front-end experience except for Winforms and Blazor.  I have 
 - Componentized design with services for API access
 - Unit tests using Vitest framework.
 - Hosting at Vercel connected to Github/main branch.
+- URL at Vercel is https://blog-client-three-psi.vercel.app
+- Domain thechief.com is kept at Network Solutions
+- Domain netservers now point to a proxy domain at Cloudshare.
 
 ### Backend & Hosting
 - Wordpress Premium plan at Hostinger.com to enable full REST API access
@@ -29,7 +32,7 @@ I have very little front-end experience except for Winforms and Blazor.  I have 
 - WP is configured for three sites: wa1x, applefinch, and the default headless site for development.
 - WA1X is a ham radio blog.   Applefinch is a blog about science and the scientific method.
 - Vercel hosting for the frontend (connects to GitHub, generous free tier)
-- URL at Vercel is https://blog-client-three-psi.vercel.app
+
 - I am the only admin since all the blogs will be mine.
 - I will use the Wordpress Admin for all configuration and content management.
 
