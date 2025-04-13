@@ -1,41 +1,4 @@
 {
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
-  ],
-
-  "redirects": [
-    {
-      "source": "/(.*)",
-      "destination": "https://$1",
-      "permanent": true,
-      "has": [
-        {
-          "type": "host",
-          "value": "thechief.com"
-        }
-      ]
-    },
-    {
-      "source": "/(.*)",
-      "destination": "https://$1",
-      "permanent": true,
-      "has": [
-        {
-          "type": "host",
-          "value": "wa1x.thechief.com"
-        }
-      ]
-    },
-    {
-      "source": "/(.*)",
-      "destination": "https://$1",
-      "permanent": true,
-      "has": [
-        {
-          "type": "host",
-          "value": "applefinch.thechief.com"
-        }
-      ]
-    }
-  ]
 }
