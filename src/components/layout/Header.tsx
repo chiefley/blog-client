@@ -45,6 +45,11 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, sidebarOpen }) => {
 
     // Check if there's a logo to display
     if (siteInfo.logo_url) {
+      // Find the best logo size to use
+      const logoSrc = siteInfo.logo_medium || 
+                     siteInfo.logo_thumbnail || 
+                     siteInfo.logo_url;
+                     
       return (
         <Box 
           component={RouterLink}
@@ -59,7 +64,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, sidebarOpen }) => {
         >
           <Box
             component="img"
-            src={siteInfo.logo_medium || siteInfo.logo_url}
+            src={logoSrc}
             alt={siteInfo.name}
             sx={{ 
               height: 40,

@@ -1,3 +1,19 @@
+import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
+import { getSiteInfo } from '../services/wordpressApi';
+import { SiteInfo } from '../types/interfaces';
+import { getCurrentBlogPath } from '../config/multisiteConfig';
+
+// Default values
+const defaultSiteInfo: SiteInfo = {
+  name: 'XBlog',
+  description: 'A modern React blog with WordPress backend',
+  url: '/',
+  home: '/',
+  gmt_offset: 0,
+  timezone_string: '',
+  site_logo: null
+};
+
 /**
  * Fallback method to get basic site info from available public endpoints
  */
@@ -74,3 +90,75 @@ const getFallbackSiteInfo = async (): Promise<SiteInfo> => {
     site_logo: null
   };
 };
+
+// Create the context
+interface SiteInfoContextType {
+  siteInfo: SiteInfo;
+  loading: boolean;
+  error: string | null;
+  refreshSiteInfo: () => Promise<void>;
+}
+
+const SiteInfoContext = createContext<SiteInfoContextType>({
+  siteInfo: defaultSiteInfo,
+  loading: false,
+  error: null,
+  refreshSiteInfo: async () => {}
+});
+
+// Provider component
+interface SiteInfoProviderProps {
+  children: ReactNode;
+}
+
+export const SiteInfoProvider: React.FC<SiteInfoProviderProps> = ({ children }) => {
+  const [siteInfo, setSiteInfo] = useState<SiteInfo>(defaultSiteInfo);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchSiteInfo = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Try to get site info from WordPress API
+      const data = await getSiteInfo();
+      setSiteInfo(data);
+    } catch (err) {
+      console.error('Failed to fetch site info from API:', err);
+      
+      try {
+        // Try fallback method if API fails
+        console.log('Trying fallback site info method...');
+        const fallbackData = await getFallbackSiteInfo();
+        setSiteInfo(fallbackData);
+      } catch (fallbackErr) {
+        console.error('Fallback site info method also failed:', fallbackErr);
+        setError('Failed to load site information');
+        // Keep the default values in case of error
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSiteInfo();
+  }, []);
+
+  // Function to manually refresh the site info
+  const refreshSiteInfo = async () => {
+    await fetchSiteInfo();
+  };
+
+  return (
+    <SiteInfoContext.Provider value={{ siteInfo, loading, error, refreshSiteInfo }}>
+      {children}
+    </SiteInfoContext.Provider>
+  );
+};
+
+// Custom hook for easy context usage
+export const useSiteInfo = () => useContext(SiteInfoContext);
+
+export default SiteInfoContext;

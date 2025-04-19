@@ -53,7 +53,7 @@ export const getRootApiUrl = (): string => {
 /**
  * Get site information
  */
-export const getSiteInfo = async (): Promise<any> => {
+export const getSiteInfo = async (): Promise<SiteInfo> => {
   const baseUrl = import.meta.env.VITE_WP_API_BASE_URL || 'https://wpcms.thechief.com';
   const blogPath = getCurrentBlogPath();
   
@@ -86,18 +86,22 @@ export const getSiteInfo = async (): Promise<any> => {
     
     const siteInfo = await response.json();
     console.log('Site info fetched successfully:', siteInfo);
-    return siteInfo;
+    return siteInfo as SiteInfo;
   } catch (error) {
     console.error('Error fetching site info:', error);
     
     // Return fallback values if the API fails
     return {
       name: 'XBlog',
-      description: 'A modern React blog with WordPress backend'
+      description: 'A modern React blog with WordPress backend',
+      url: '/',
+      home: '/',
+      gmt_offset: 0,
+      timezone_string: '',
+      site_logo: null
     };
   }
 }
-
 /**
  * Get posts with optional filtering
  */

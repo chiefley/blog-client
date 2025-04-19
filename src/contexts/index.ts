@@ -1,2 +1,2 @@
-// src/context/index.ts
-export { default as SiteContext, SiteProvider, useSiteInfo } from './SiteInfoContext';
+// src/contexts/index.ts
+export { default as SiteInfoContext, SiteInfoProvider, useSiteInfo } from './SiteInfoContext';

@@ -98,9 +98,12 @@ export interface SiteInfo {
   site_logo: number | null;
   // Additional fields from our custom endpoint
   logo_url?: string | null;
+  logo_medium?: string | null;
+  logo_thumbnail?: string | null;
+  logo_large?: string | null;
+  logo_full?: string | null;
   icon_url?: string | null;
 }
-
 // For backward compatibility with existing components
 export type Post = WordPressPost;
 
