@@ -1,9 +1,11 @@
 import React from 'react';
 import { Box, Container, Typography, Link, Grid } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
+import { useSiteInfo } from '../../contexts/SiteInfoContext';
 
 const Footer: React.FC = () => {
     const currentYear = new Date().getFullYear();
+    const { siteInfo } = useSiteInfo();
 
     return (
         <Box component="footer" sx={{ py: 3, bgcolor: 'primary.main', color: 'white', mt: 'auto' }}>
@@ -11,10 +13,10 @@ const Footer: React.FC = () => {
                 <Grid container spacing={3}>
                     <Grid item xs={12} md={4}>
                         <Typography variant="h6" gutterBottom>
-                            XBlog
+                            {siteInfo.name}
                         </Typography>
                         <Typography variant="body2">
-                            A modern React blog with WordPress backend
+                            {siteInfo.description || 'A modern React blog with WordPress backend'}
                         </Typography>
                     </Grid>
                     <Grid item xs={12} md={4}>
@@ -51,7 +53,7 @@ const Footer: React.FC = () => {
                             WordPress
                         </Typography>
                         <Link 
-                            href="https://wpcms.thechief.com/wp-admin/"
+                            href={`${siteInfo.url}/wp-admin/`}
                             target="_blank"
                             rel="noopener noreferrer"
                             color="inherit"
@@ -71,7 +73,7 @@ const Footer: React.FC = () => {
                     </Grid>
                 </Grid>
                 <Typography variant="body2" align="center" sx={{ mt: 4 }}>
-                    © {currentYear} XBlog. All rights reserved.
+                    © {currentYear} {siteInfo.name}. All rights reserved.
                 </Typography>
             </Container>
         </Box>

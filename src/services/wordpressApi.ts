@@ -1,5 +1,5 @@
 // src/services/wordpressApi.ts
-import { WordPressPost, Category, Comment, CommentData } from '../types/interfaces';
+import { WordPressPost, Category, Comment, CommentData, SiteInfo } from '../types/interfaces';
 import { createAuthHeader } from './authService';
 import { getCurrentBlogPath } from '../config/multisiteConfig';
 
@@ -32,8 +32,71 @@ export const getApiUrl = (): string => {
   return apiUrl;
 };
 
-// Helper function code has been removed to fix TS6133 error
-// We can reimplement this in the future if needed
+/**
+ * Get the root API URL (without /wp/v2) for other endpoints
+ */
+export const getRootApiUrl = (): string => {
+  const blogPath = getCurrentBlogPath();
+  let apiUrl = `${API_BASE_URL}`;
+  
+  // Add blog path if we're in a multisite environment
+  if (blogPath) {
+    apiUrl += `/${blogPath}`;
+  }
+  
+  // Add the REST API root endpoint
+  apiUrl += '/wp-json';
+  
+  return apiUrl;
+};
+
+/**
+ * Get site information
+ */
+export const getSiteInfo = async (): Promise<any> => {
+  const baseUrl = import.meta.env.VITE_WP_API_BASE_URL || 'https://wpcms.thechief.com';
+  const blogPath = getCurrentBlogPath();
+  
+  // Construct the site info URL, adding the blog path for multisite
+  let siteInfoUrl = `${baseUrl}`;
+  if (blogPath) {
+    siteInfoUrl += `/${blogPath}`;
+  }
+  siteInfoUrl += '/wp-json/site-info/v1/public';
+  
+  try {
+    // Get authentication header from authService
+    const authHeader = createAuthHeader();
+    
+    // Create request options with auth header
+    const requestOptions: RequestInit = {
+      headers: {
+        'Content-Type': 'application/json',
+        ...(authHeader || {})
+      }
+    };
+    
+    console.log('Fetching site info:', siteInfoUrl);
+    
+    const response = await fetch(siteInfoUrl, requestOptions);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch site info: ${response.status} ${response.statusText}`);
+    }
+    
+    const siteInfo = await response.json();
+    console.log('Site info fetched successfully:', siteInfo);
+    return siteInfo;
+  } catch (error) {
+    console.error('Error fetching site info:', error);
+    
+    // Return fallback values if the API fails
+    return {
+      name: 'XBlog',
+      description: 'A modern React blog with WordPress backend'
+    };
+  }
+}
 
 /**
  * Get posts with optional filtering
