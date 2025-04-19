@@ -1,13 +1,29 @@
-import React, { useState } from 'react';
+// src/App.tsx
+import React, { useState, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { Box, Container, CssBaseline, Grid, useMediaQuery, useTheme } from '@mui/material';
+import { Box, Container, CssBaseline, Grid, useMediaQuery, useTheme, CircularProgress } from '@mui/material';
 import { Header, Sidebar } from './components/layout';
-import Home from './pages/Home';
-import CategoryPosts from './pages/CategoryPosts';
-import TagPosts from './pages/TagPosts';
-import PostDetail from './components/posts/PostDetail';
 import Footer from './components/layout/Footer';
 import { SiteInfoProvider } from './contexts/SiteInfoContext';
+
+// Lazy load pages instead of importing them directly
+const Home = lazy(() => import('./pages/Home'));
+const CategoryPosts = lazy(() => import('./pages/CategoryPosts'));
+const TagPosts = lazy(() => import('./pages/TagPosts'));
+const PostDetail = lazy(() => import('./components/posts/PostDetail'));
+
+// Loading fallback component
+const PageLoader = () => (
+  <Box sx={{ 
+    display: 'flex', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    py: 8,
+    minHeight: '400px'
+  }}>
+    <CircularProgress />
+  </Box>
+);
 
 const App: React.FC = () => {
   const theme = useTheme();
@@ -38,7 +54,7 @@ const App: React.FC = () => {
                     position: isMobile ? 'fixed' : 'static',
                     top: isMobile ? 64 : 'auto',
                     left: 0,
-                    width: isMobile ? '85%' : 'auto', // Control width on mobile
+                    width: isMobile ? '85%' : 'auto',
                     maxWidth: isMobile ? '300px' : 'none',
                     bottom: 0,
                     zIndex: 100,
@@ -52,15 +68,17 @@ const App: React.FC = () => {
                   <Sidebar />
                 </Grid>
 
-                {/* Main Content */}
+                {/* Main Content - Now wrapped in Suspense for lazy loading */}
                 <Grid item xs={12} md={isMobile ? 12 : 9}>
-                  <Routes>
-                    <Route path="/" element={<Home />} />
-                    <Route path="/posts/category/:slug" element={<CategoryPosts />} />
-                    <Route path="/posts/tag/:slug" element={<TagPosts />} />
-                    <Route path="/post/:slug" element={<PostDetail />} />
-                    {/* Add other routes as needed */}
-                  </Routes>
+                  <Suspense fallback={<PageLoader />}>
+                    <Routes>
+                      <Route path="/" element={<Home />} />
+                      <Route path="/posts/category/:slug" element={<CategoryPosts />} />
+                      <Route path="/posts/tag/:slug" element={<TagPosts />} />
+                      <Route path="/post/:slug" element={<PostDetail />} />
+                      {/* Add other routes as needed */}
+                    </Routes>
+                  </Suspense>
                 </Grid>
               </Grid>
             </Container>
