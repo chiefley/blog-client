@@ -61,7 +61,7 @@ I have very little front-end experience except for Winforms and Blazor.  I have 
   - WP REST API Controller 
   - WP REST Cache
   - WP-REST-API V2 Menus
-  - WordPress REST API Authentication 
+  - WordPress REST API Authentication (disabled for now)
   - Better REST API Featured Image (see development details below)
 - Test url https://wpcms.thechief.com/wp-json/wp/v2/categories still works.
 - Installed unit test framework.
@@ -90,7 +90,6 @@ I have very little front-end experience except for Winforms and Blazor.  I have 
   - The original site at wpcms.thechief.com.  This will only be used as the "Network Admin" site.
   - A blog site called WA1X at wpcms.thechief.com/wa1x  This will be ham radio related.
   - A blog site called The Apple and the Finch at wpcms.thechief.com/applefinch. This will be related to articles about evolution and other topics in science.
-- Implemented Basic Authentication with base64 encoding as per the  WordPress REST API Authentication wordpress plugin.
 - Componentized the sections in the Sidebar.
 - Hierarchical Categories in client.
 - Category and tag display on post cards
@@ -101,11 +100,9 @@ I have very little front-end experience except for Winforms and Blazor.  I have 
 - Work on any UI design details.
 - Polish the current functionality 
 - Test thoroughly across devices and browsers to ensure responsiveness works well
-- Implement comments functionality - Add the ability for users to view and post comments
 - Implement domain-specific theming - Add support for different themes based on the domain or blog
 - Add analytics integration - Implement tracking to monitor user behavior
-- Optimize performance - Look into options like code splitting, lazy loading, and image optimization
-
+- Optimize performance - Look into options like code splitting, lazy loading.
 
 #Development Details
 - Parsing info from Better REST Featured Image plugin.   This fix below was necessary as the signature is different than what was anticipated:

@@ -18,7 +18,7 @@
   - User Role Editor
   - WP REST Cache
   - WP-REST-API V2 Menus
-  - WordPress REST API Authentication 
+  - WordPress REST API Authentication (disabled for now)
   - Better REST API Featured Image (see development details below)
   - Max Mega Menu
 

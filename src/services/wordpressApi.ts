@@ -1,6 +1,5 @@
 // src/services/wordpressApi.ts
 import { WordPressPost, Category, Comment, CommentData, SiteInfo } from '../types/interfaces';
-import { createAuthHeader } from './authService';
 import { getCurrentBlogPath } from '../config/multisiteConfig';
 
 // Base API URL from environment variables
@@ -51,7 +50,7 @@ export const getRootApiUrl = (): string => {
 };
 
 /**
- * Get site information using multiple fallback strategies with improved error handling
+ * Get site information
  */
 export const getSiteInfo = async (): Promise<SiteInfo> => {
   const baseUrl = import.meta.env.VITE_WP_API_BASE_URL || 'https://wpcms.thechief.com';
@@ -65,18 +64,16 @@ export const getSiteInfo = async (): Promise<SiteInfo> => {
   
   console.log('Fetching site info for:', baseApiUrl);
   
-  // Create an array of endpoints to try in order (prioritizing the public endpoint)
+  // Create an array of endpoints to try in order
   const endpointsToTry = [
-    // 1. Try the public endpoint first (no auth required)
+    // 1. Try the public endpoint first
     {
       url: `${baseApiUrl}/wp-json/site-info/v1/public`,
-      auth: false,
       description: 'public site-info endpoint'
     },
     // 2. Try the standard WordPress API for minimal data (fallback)
     {
       url: `${baseApiUrl}/wp-json`,
-      auth: false,
       description: 'WordPress root endpoint'
     }
   ];
@@ -94,20 +91,6 @@ export const getSiteInfo = async (): Promise<SiteInfo> => {
         // Add a cache-busting query parameter
         cache: 'no-cache'
       };
-      
-      // Add auth header if needed (only for authenticated endpoints)
-      if (endpoint.auth) {
-        const authHeader = createAuthHeader();
-        if (authHeader) {
-          requestOptions.headers = {
-            ...requestOptions.headers,
-            ...authHeader
-          };
-          console.log('Using authentication for request');
-        } else {
-          console.log('Authentication credentials not available');
-        }
-      }
       
       // Make the request with timeout
       const controller = new AbortController();
@@ -237,8 +220,7 @@ export const getPosts = async (options: {
   params.append('page', page.toString());
   params.append('per_page', perPage.toString());
   
-  // FIXED: Put back wp:featuredmedia since we need the embedded media as a fallback
-  // even with Better REST API Featured Image plugin installed
+  // Include embedded media data
   params.append('_embed', 'author,wp:featuredmedia,wp:term');
 
   // Handle either categoryId or categorySlug
@@ -265,27 +247,21 @@ export const getPosts = async (options: {
   const requestUrl = `${apiUrl}/posts?${params}`;
   
   try {
-    // Get authentication header from authService
-    const authHeader = createAuthHeader();
-    
-    // Create request options with auth header
+    // Create request options
     const requestOptions: RequestInit = {
       headers: {
-        'Content-Type': 'application/json',
-        ...(authHeader || {})
+        'Content-Type': 'application/json'
       }
     };
 
-    // For debugging - log the full request details
+    // For debugging - log the request details
     console.log('Request URL:', requestUrl);
-    console.log('Request Headers:', requestOptions.headers);
 
     const response = await fetch(requestUrl, requestOptions);
     
     // Log response details for debugging
     console.log(`Posts API Response [${response.status}]:`, {
       url: requestUrl,
-      authenticated: !!authHeader,
       status: response.status,
       headers: {
         'X-WP-Total': response.headers.get('X-WP-Total'),
@@ -330,21 +306,16 @@ export const getPostBySlug = async (slug: string): Promise<WordPressPost | null>
   const requestUrl = `${apiUrl}/posts?${params}`;
 
   try {
-    // Get authentication header from authService
-    const authHeader = createAuthHeader();
-
-    // Create request options with auth header
+    // Create request options
     const requestOptions: RequestInit = {
       headers: {
-        'Content-Type': 'application/json',
-        ...(authHeader || {})
+        'Content-Type': 'application/json'
       }
     };
 
     // For debugging - log the request
     console.log('Fetching post by slug:', slug);
     console.log('Request URL:', requestUrl);
-    console.log('With auth header:', !!authHeader);
 
     const response = await fetch(requestUrl, requestOptions);
     
@@ -352,7 +323,6 @@ export const getPostBySlug = async (slug: string): Promise<WordPressPost | null>
     console.log(`Post by Slug API Response [${response.status}]:`, {
       slug,
       url: requestUrl,
-      authenticated: !!authHeader,
       status: response.status
     });
     
@@ -387,18 +357,14 @@ export const getCategories = async (): Promise<Category[]> => {
   const requestUrl = `${apiUrl}/categories?per_page=100`;
 
   try {
-    // Get authentication header from authService
-    const authHeader = createAuthHeader();
-
-    // Create request options with auth header
+    // Create request options
     const requestOptions: RequestInit = {
       headers: {
-        'Content-Type': 'application/json',
-        ...(authHeader || {})
+        'Content-Type': 'application/json'
       }
     };
 
-    console.log('Fetching categories with auth:', !!authHeader);
+    console.log('Fetching categories');
     console.log('Categories request URL:', requestUrl);
 
     const response = await fetch(requestUrl, requestOptions);
@@ -406,7 +372,6 @@ export const getCategories = async (): Promise<Category[]> => {
     // Log response details for debugging
     console.log(`Categories API Response [${response.status}]:`, {
       url: requestUrl,
-      authenticated: !!authHeader,
       status: response.status
     });
     
@@ -440,20 +405,15 @@ export const getCategoryBySlug = async (slug: string): Promise<Category | null> 
   const requestUrl = `${apiUrl}/categories?slug=${slug}`;
 
   try {
-    // Get authentication header from authService
-    const authHeader = createAuthHeader();
-
-    // Create request options with auth header
+    // Create request options
     const requestOptions: RequestInit = {
       headers: {
-        'Content-Type': 'application/json',
-        ...(authHeader || {})
+        'Content-Type': 'application/json'
       }
     };
 
     console.log('Fetching category by slug:', slug);
     console.log('Request URL:', requestUrl);
-    console.log('With auth header:', !!authHeader);
 
     const response = await fetch(requestUrl, requestOptions);
     
@@ -461,7 +421,6 @@ export const getCategoryBySlug = async (slug: string): Promise<Category | null> 
     console.log(`Category by Slug API Response [${response.status}]:`, {
       slug,
       url: requestUrl,
-      authenticated: !!authHeader,
       status: response.status
     });
     
@@ -496,18 +455,14 @@ export const getTags = async (): Promise<any[]> => {
   const requestUrl = `${apiUrl}/tags?per_page=100`;
 
   try {
-    // Get authentication header from authService
-    const authHeader = createAuthHeader();
-
-    // Create request options with auth header
+    // Create request options
     const requestOptions: RequestInit = {
       headers: {
-        'Content-Type': 'application/json',
-        ...(authHeader || {})
+        'Content-Type': 'application/json'
       }
     };
 
-    console.log('Fetching tags with auth:', !!authHeader);
+    console.log('Fetching tags');
     console.log('Tags request URL:', requestUrl);
 
     const response = await fetch(requestUrl, requestOptions);
@@ -515,7 +470,6 @@ export const getTags = async (): Promise<any[]> => {
     // Log response details for debugging
     console.log(`Tags API Response [${response.status}]:`, {
       url: requestUrl,
-      authenticated: !!authHeader,
       status: response.status
     });
     
@@ -549,27 +503,21 @@ export const getComments = async (postId: number): Promise<Comment[]> => {
   const requestUrl = `${apiUrl}/comments?post=${postId}&orderby=date&order=asc&per_page=100`;
   
   try {
-    // Get authentication header from authService
-    const authHeader = createAuthHeader();
-    
-    // Create request options with auth header
+    // Create request options
     const requestOptions: RequestInit = {
       headers: {
-        'Content-Type': 'application/json',
-        ...(authHeader || {})
+        'Content-Type': 'application/json'
       }
     };
 
     console.log('Fetching comments for post:', postId);
     console.log('Request URL:', requestUrl);
-    console.log('With auth header:', !!authHeader);
 
     const response = await fetch(requestUrl, requestOptions);
     
     console.log(`Comments API Response [${response.status}]:`, {
       postId,
       url: requestUrl,
-      authenticated: !!authHeader,
       status: response.status
     });
     
@@ -603,29 +551,23 @@ export const postComment = async (commentData: CommentData): Promise<Comment | n
   const requestUrl = `${apiUrl}/comments`;
   
   try {
-    // Get authentication header from authService
-    const authHeader = createAuthHeader();
-    
-    // Create request options with auth header and comment data
+    // Create request options with comment data
     const requestOptions: RequestInit = {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        ...(authHeader || {})
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify(commentData)
     };
 
     console.log('Posting comment for post:', commentData.post);
     console.log('Request URL:', requestUrl);
-    console.log('With auth header:', !!authHeader);
 
     const response = await fetch(requestUrl, requestOptions);
     
     console.log(`Post Comment API Response [${response.status}]:`, {
       postId: commentData.post,
       url: requestUrl,
-      authenticated: !!authHeader,
       status: response.status
     });
     
