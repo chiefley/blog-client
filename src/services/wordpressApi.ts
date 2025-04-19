@@ -81,8 +81,6 @@ export const getSiteInfo = async (): Promise<SiteInfo> => {
     }
   ];
   
-  let lastError = null;
-  
   // Try each endpoint in order
   for (const endpoint of endpointsToTry) {
     try {
@@ -166,7 +164,6 @@ export const getSiteInfo = async (): Promise<SiteInfo> => {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.error(`Error fetching from ${endpoint.description}:`, errorMessage);
-      lastError = error;
     }
   }
   
@@ -223,6 +220,7 @@ export const getSiteInfo = async (): Promise<SiteInfo> => {
     };
   }
 };
+
 /**
  * Get posts with optional filtering
  */

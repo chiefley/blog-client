@@ -16,7 +16,7 @@ export interface AuthData {
 export const safeBase64Encode = (str: string): string => {
   // Convert string to UTF-8 encoded string
   const encoded = encodeURIComponent(str)
-    .replace(/%([0-9A-F]{2})/g, (match, p1) => {
+    .replace(/%([0-9A-F]{2})/g, (_, p1) => { // Use _ for unused parameter
       return String.fromCharCode(parseInt(p1, 16));
     });
   
