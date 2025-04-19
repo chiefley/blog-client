@@ -7,11 +7,7 @@ import Categories from './Categories';
 import Tags from './Tags';
 import AdminLinks from './AdminLinks';
 
-interface SidebarProps {
-  isAuthenticated?: boolean;
-}
-
-const Sidebar: React.FC<SidebarProps> = ({ isAuthenticated = false }) => {
+const Sidebar: React.FC = () => {
   return (
     <Paper 
       elevation={1} 
@@ -32,8 +28,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isAuthenticated = false }) => {
         {/* Tags Component */}
         <Tags maxTags={20} />
         
-        {/* Admin Links Component - only shown if authenticated */}
-        <AdminLinks isAuthenticated={isAuthenticated} />
+        {/* Show Admin Links only if we're in WordPress admin */}
+        {window.location.href.includes('/wp-admin') && (
+          <AdminLinks isAuthenticated={true} />
+        )}
       </Box>
     </Paper>
   );

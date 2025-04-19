@@ -9,7 +9,6 @@ import {
 } from '@mui/material';
 import PostList from '../components/posts/PostList';
 import { WordPressPost } from '../types/interfaces';
-import { createAuthHeader } from '../services/authService';
 import { getApiUrl } from '../services/wordpressApi';
 
 const TagPosts = () => {
@@ -32,13 +31,11 @@ const TagPosts = () => {
       try {
         // Use the getApiUrl function to get the correct base URL for the current blog
         const apiUrl = getApiUrl();
-        const authHeader = createAuthHeader();
         
-        // Create request options with auth header
+        // Create request options
         const requestOptions: RequestInit = {
           headers: {
-            'Content-Type': 'application/json',
-            ...(authHeader || {})
+            'Content-Type': 'application/json'
           }
         };
 
@@ -64,7 +61,6 @@ const TagPosts = () => {
         const postsUrl = `${apiUrl}/posts?tags=${tagId}&_embed=true&page=${currentPage}&per_page=10`;
         
         console.log('Fetching tag posts with URL:', postsUrl);
-        console.log('Using auth header:', !!authHeader);
         
         const postsResponse = await fetch(postsUrl, requestOptions);
         

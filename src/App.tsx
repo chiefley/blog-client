@@ -7,15 +7,12 @@ import CategoryPosts from './pages/CategoryPosts';
 import TagPosts from './pages/TagPosts';
 import PostDetail from './components/posts/PostDetail';
 import Footer from './components/layout/Footer';
-import { useAuth } from './services/authService';
 import { SiteInfoProvider } from './contexts/SiteInfoContext';
 
 const App: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  // Get authentication status from the auth service
-  const { isAuthenticated } = useAuth();
   
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
@@ -52,7 +49,7 @@ const App: React.FC = () => {
                     boxShadow: isMobile ? 3 : 0
                   }}
                 >
-                  <Sidebar isAuthenticated={isAuthenticated} />
+                  <Sidebar />
                 </Grid>
 
                 {/* Main Content */}
