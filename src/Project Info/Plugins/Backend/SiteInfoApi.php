@@ -1,93 +1,101 @@
-<?php
 /**
- * Plugin Name: Site Info API
- * Description: Creates a simple endpoint to access basic site information with any authenticated user
- * Version: 1.1
- * Author: Claude
- * Network: true
+ * Get site information using multiple fallback strategies
  */
-
-// Register the custom REST API endpoint
-add_action('rest_api_init', function () {
-    register_rest_route('site-info/v1', '/basic', array(
-        'methods' => 'GET',
-        'callback' => 'get_basic_site_info',
-        'permission_callback' => function() {
-            // Allow any authenticated user - more permissive than before
-            return is_user_logged_in();
+export const getSiteInfo = async (): Promise<SiteInfo> => {
+  const baseUrl = import.meta.env.VITE_WP_API_BASE_URL || 'https://wpcms.thechief.com';
+  const blogPath = getCurrentBlogPath();
+  
+  // Construct the site info URL with blog path for multisite
+  let baseApiUrl = baseUrl;
+  if (blogPath) {
+    baseApiUrl += `/${blogPath}`;
+  }
+  
+  // Create an array of endpoints to try in order
+  const endpointsToTry = [
+    // 1. Try the public endpoint first (no auth required)
+    {
+      url: `${baseApiUrl}/wp-json/site-info/v1/public`,
+      auth: false,
+      description: 'public site-info endpoint'
+    },
+    // 2. Try the basic endpoint with auth
+    {
+      url: `${baseApiUrl}/wp-json/site-info/v1/basic`,
+      auth: true,
+      description: 'authenticated site-info endpoint'
+    },
+    // 3. Try standard WordPress API for minimal data
+    {
+      url: `${baseApiUrl}/wp-json`,
+      auth: false,
+      description: 'WordPress root endpoint'
+    }
+  ];
+  
+  let lastError = null;
+  
+  // Try each endpoint in order
+  for (const endpoint of endpointsToTry) {
+    try {
+      console.log(`Attempting to fetch site info from ${endpoint.description}:`, endpoint.url);
+      
+      // Set up request options
+      const requestOptions: RequestInit = {
+        headers: {
+          'Content-Type': 'application/json'
         }
-    ));
-    
-    // Add a fully public endpoint as well
-    register_rest_route('site-info/v1', '/public', array(
-        'methods' => 'GET',
-        'callback' => 'get_basic_site_info',
-        'permission_callback' => '__return_true' // Allow anyone to access this endpoint
-    ));
-});
-
-/**
- * Callback function to return basic site information
- * 
- * @return array Basic site information
- */
-function get_basic_site_info() {
-    // Get site logo ID if available
-    $site_logo_id = get_theme_mod('custom_logo');
-    
-    // Get site icon
-    $site_icon_id = get_option('site_icon');
-    
-    // Build the response array
-    $site_info = array(
-        'name' => get_bloginfo('name'),
-        'description' => get_bloginfo('description'),
-        'url' => get_bloginfo('url'),
-        'home' => home_url(),
-        'site_logo' => $site_logo_id,
-        'site_icon' => $site_icon_id,
-        'language' => get_bloginfo('language'),
-        'timezone' => wp_timezone_string(),
-        'gmt_offset' => get_option('gmt_offset'),
-        'date_format' => get_option('date_format')
-    );
-    
-    // Add logo URLs if available
-    if (!empty($site_logo_id)) {
-        $site_info['logo_url'] = wp_get_attachment_url($site_logo_id);
-        
-        // Add various logo sizes
-        $logo_sizes = array('thumbnail', 'medium', 'large', 'full');
-        foreach ($logo_sizes as $size) {
-            $logo_data = wp_get_attachment_image_src($site_logo_id, $size);
-            if ($logo_data) {
-                $site_info['logo_' . $size] = $logo_data[0];
-            }
+      };
+      
+      // Add auth header if needed
+      if (endpoint.auth) {
+        const authHeader = createAuthHeader();
+        if (authHeader) {
+          requestOptions.headers = {
+            ...requestOptions.headers,
+            ...authHeader
+          };
+          console.log('Using authentication for request');
+        } else {
+          console.log('Authentication credentials not available');
         }
+      }
+      
+      // Make the request
+      const response = await fetch(endpoint.url, requestOptions);
+      
+      if (!response.ok) {
+        console.log(`${endpoint.description} returned ${response.status} ${response.statusText}`);
+        continue; // Try next endpoint
+      }
+      
+      const data = await response.json();
+      
+      // Process response based on which endpoint succeeded
+      if (endpoint.url.includes('site-info')) {
+        // This is our custom endpoint, return data directly
+        console.log('Site info fetched successfully from custom endpoint');
+        return data as SiteInfo;
+      } else if (endpoint.url.endsWith('/wp-json')) {
+        // This is the WordPress root endpoint, extract what we can
+        console.log('Extracting site info from WordPress root endpoint');
+        return {
+          name: data.name || 'XBlog',
+          description: data.description || 'A WordPress Blog',
+          url: data.url || '/',
+          home: data.home || '/',
+          gmt_offset: 0,
+          timezone_string: '',
+          site_logo: null
+        };
+      }
+    } catch (error) {
+      console.error(`Error fetching from ${endpoint.description}:`, error);
+      lastError = error;
     }
-    
-    // Add site icon URL if available
-    if (!empty($site_icon_id)) {
-        $site_info['icon_url'] = wp_get_attachment_url($site_icon_id);
-    }
-    
-    // Return the site information
-    return $site_info;
+  }
+  
+  // If we reach here, all endpoints failed
+  console.error('All site info endpoints failed', lastError);
+  throw new Error('Failed to fetch site information from any available endpoint');
 }
-
-// Add CORS headers to make sure our endpoint is accessible
-function add_cors_headers() {
-    header('Access-Control-Allow-Origin: *');
-    header('Access-Control-Allow-Methods: GET, OPTIONS');
-    header('Access-Control-Allow-Credentials: true');
-    header('Access-Control-Allow-Headers: Origin, X-Requested-With, Content-Type, Accept, Authorization');
-    if ('OPTIONS' == $_SERVER['REQUEST_METHOD']) {
-        status_header(200);
-        exit();
-    }
-}
-
-add_action('rest_api_init', function() {
-    // Add the CORS headers to our endpoint
-    add_action('rest_pre_serve_request', 'add_cors_headers');
-});
