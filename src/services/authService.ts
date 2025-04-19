@@ -10,6 +10,21 @@ export interface AuthData {
 }
 
 /**
+ * Unicode-safe base64 encoding function
+ * This properly handles special characters in credentials that btoa() can't handle
+ */
+export const safeBase64Encode = (str: string): string => {
+  // Convert string to UTF-8 encoded string
+  const encoded = encodeURIComponent(str)
+    .replace(/%([0-9A-F]{2})/g, (match, p1) => {
+      return String.fromCharCode(parseInt(p1, 16));
+    });
+  
+  // Now use standard base64 encoding on the UTF-8 string
+  return btoa(encoded);
+};
+
+/**
  * Hook to handle WordPress Basic Authentication
  */
 export const useAuth = (): AuthData => {
@@ -23,16 +38,16 @@ export const useAuth = (): AuthData => {
     const wpUsername = import.meta.env.VITE_WP_APP_USERNAME;
     const wpPassword = import.meta.env.VITE_WP_APP_PASSWORD;
 
-    // For debugging only - REMOVE IN PRODUCTION
+    // For debugging only - show if credentials are available
     console.log('Auth credentials available:', !!wpUsername && !!wpPassword);
     
     if (wpUsername && wpPassword) {
       try {
         const credentials = `${wpUsername}:${wpPassword}`;
-        const encodedCredentials = btoa(credentials); // Base64 encode
+        // Use the safe base64 encoding function
+        const encodedCredentials = safeBase64Encode(credentials);
         const header = { Authorization: `Basic ${encodedCredentials}` };
         
-        // For debugging only - REMOVE IN PRODUCTION
         console.log('Auth header created successfully');
         
         setAuthData({
@@ -73,17 +88,14 @@ export const createAuthHeader = (): { Authorization: string } | null => {
   
   try {
     const credentials = `${wpUsername}:${wpPassword}`;
-    const encodedCredentials = btoa(credentials);
+    // Use the safe base64 encoding function
+    const encodedCredentials = safeBase64Encode(credentials);
     const authHeader = { 
       Authorization: `Basic ${encodedCredentials}`
     };
     
     // Debug logging
     console.log('🔐 Authentication: Created auth header successfully');
-    // Don't log the full header in production as it contains sensitive info
-    if (process.env.NODE_ENV === 'development') {
-      console.log('🔐 Auth header type:', authHeader.Authorization.split(' ')[0]);
-    }
     
     return authHeader;
   } catch (error) {

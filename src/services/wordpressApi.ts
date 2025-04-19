@@ -51,7 +51,7 @@ export const getRootApiUrl = (): string => {
 };
 
 /**
- * Get site information using multiple fallback strategies
+ * Get site information using multiple fallback strategies with improved error handling
  */
 export const getSiteInfo = async (): Promise<SiteInfo> => {
   const baseUrl = import.meta.env.VITE_WP_API_BASE_URL || 'https://wpcms.thechief.com';
@@ -63,7 +63,9 @@ export const getSiteInfo = async (): Promise<SiteInfo> => {
     baseApiUrl += `/${blogPath}`;
   }
   
-  // Create an array of endpoints to try in order
+  console.log('Fetching site info for:', baseApiUrl);
+  
+  // Create an array of endpoints to try in order (prioritizing the public endpoint)
   const endpointsToTry = [
     // 1. Try the public endpoint first (no auth required)
     {
@@ -71,13 +73,7 @@ export const getSiteInfo = async (): Promise<SiteInfo> => {
       auth: false,
       description: 'public site-info endpoint'
     },
-    // 2. Try the basic endpoint with auth
-    {
-      url: `${baseApiUrl}/wp-json/site-info/v1/basic`,
-      auth: true,
-      description: 'authenticated site-info endpoint'
-    },
-    // 3. Try standard WordPress API for minimal data
+    // 2. Try the standard WordPress API for minimal data (fallback)
     {
       url: `${baseApiUrl}/wp-json`,
       auth: false,
@@ -96,10 +92,12 @@ export const getSiteInfo = async (): Promise<SiteInfo> => {
       const requestOptions: RequestInit = {
         headers: {
           'Content-Type': 'application/json'
-        }
+        },
+        // Add a cache-busting query parameter
+        cache: 'no-cache'
       };
       
-      // Add auth header if needed
+      // Add auth header if needed (only for authenticated endpoints)
       if (endpoint.auth) {
         const authHeader = createAuthHeader();
         if (authHeader) {
@@ -113,45 +111,118 @@ export const getSiteInfo = async (): Promise<SiteInfo> => {
         }
       }
       
-      // Make the request
-      const response = await fetch(endpoint.url, requestOptions);
+      // Make the request with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5-second timeout
       
-      if (!response.ok) {
-        console.log(`${endpoint.description} returned ${response.status} ${response.statusText}`);
-        continue; // Try next endpoint
-      }
-      
-      const data = await response.json();
-      
-      // Process response based on which endpoint succeeded
-      if (endpoint.url.includes('site-info')) {
-        // This is our custom endpoint, return data directly
-        console.log('Site info fetched successfully from custom endpoint');
-        return data as SiteInfo;
-      } else if (endpoint.url.endsWith('/wp-json')) {
-        // This is the WordPress root endpoint, extract what we can
-        console.log('Extracting site info from WordPress root endpoint');
-        return {
-          name: data.name || 'XBlog',
-          description: data.description || 'A WordPress Blog',
-          url: data.url || '/',
-          home: data.home || '/',
-          gmt_offset: 0,
-          timezone_string: '',
-          site_logo: null
-        };
+      try {
+        requestOptions.signal = controller.signal;
+        const response = await fetch(endpoint.url, requestOptions);
+        clearTimeout(timeoutId);
+        
+        console.log(`Response from ${endpoint.description}:`, response.status, response.statusText);
+        
+        if (!response.ok) {
+          // Log detailed error for debugging
+          console.warn(`${endpoint.description} returned ${response.status} ${response.statusText}`);
+          
+          // Try to get more error details if possible
+          try {
+            const errorText = await response.text();
+            console.warn('Error details:', errorText.substring(0, 200)); // First 200 chars
+          } catch (e) {
+            // Just log and continue if we can't get the error text
+            console.warn('Could not read error details');
+          }
+          
+          continue; // Try next endpoint
+        }
+        
+        const data = await response.json();
+        
+        // Process response based on which endpoint succeeded
+        if (endpoint.url.includes('site-info')) {
+          // This is our custom endpoint, return data directly
+          console.log('Site info fetched successfully from custom endpoint');
+          return data as SiteInfo;
+        } else if (endpoint.url.endsWith('/wp-json')) {
+          // This is the WordPress root endpoint, extract what we can
+          console.log('Extracting site info from WordPress root endpoint');
+          return {
+            name: data.name || 'XBlog',
+            description: data.description || 'A WordPress Blog',
+            url: data.url || '/',
+            home: data.home || '/',
+            gmt_offset: 0,
+            timezone_string: '',
+            site_logo: null
+          };
+        }
+      } catch (fetchError) {
+        // Clear the timeout if there was an error
+        clearTimeout(timeoutId);
+        throw fetchError;
       }
     } catch (error) {
-      console.error(`Error fetching from ${endpoint.description}:`, error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(`Error fetching from ${endpoint.description}:`, errorMessage);
       lastError = error;
     }
   }
   
-  // If we reach here, all endpoints failed
-  console.error('All site info endpoints failed', lastError);
-  throw new Error('Failed to fetch site information from any available endpoint');
+  // If we reach here, all endpoints failed - use local environment detection
+  console.warn('All site info endpoints failed. Using local fallback detection...');
+  
+  try {
+    // Extract site URL from window location (this is safe)
+    const protocol = window.location.protocol;
+    const host = window.location.host;
+    const siteUrl = `${protocol}//${host}`;
+    
+    // Get blog info from multisite config for a better fallback
+    const blogPath = getCurrentBlogPath();
+    let blogName = 'XBlog';
+    
+    if (blogPath) {
+      // Import blogs in multisiteConfig dynamically
+      try {
+        const { blogs } = await import('../config/multisiteConfig');
+        // Find the blog config that matches the current path
+        const blogConfig = Object.values(blogs).find(b => b.wpPath === blogPath);
+        if (blogConfig) {
+          blogName = blogConfig.name;
+          console.log(`Using multisite config for blog: ${blogName}`);
+        }
+      } catch (e) {
+        console.error('Could not import multisite config:', e);
+      }
+    }
+    
+    // Return a minimal fallback
+    return {
+      name: blogName,
+      description: 'A WordPress Blog',
+      url: siteUrl,
+      home: siteUrl,
+      gmt_offset: 0,
+      timezone_string: '',
+      site_logo: null
+    };
+  } catch (fallbackError) {
+    // Absolute minimal fallback if everything else fails
+    console.error('Even local fallback detection failed:', fallbackError);
+    
+    return {
+      name: 'XBlog',
+      description: 'A WordPress Blog',
+      url: '/',
+      home: '/',
+      gmt_offset: 0,
+      timezone_string: '',
+      site_logo: null
+    };
+  }
 };
-
 /**
  * Get posts with optional filtering
  */
