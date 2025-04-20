@@ -87,6 +87,23 @@ export interface WordPressPost {
   comment_count?: number; // Add comment count property
 }
 
+// Interface for site information from WordPress
+export interface SiteInfo {
+  name: string;
+  description: string;
+  url: string;
+  home: string;
+  gmt_offset: number;
+  timezone_string: string;
+  site_logo: number | null;
+  // Additional fields from our custom endpoint
+  logo_url?: string | null;
+  logo_medium?: string | null;
+  logo_thumbnail?: string | null;
+  logo_large?: string | null;
+  logo_full?: string | null;
+  icon_url?: string | null;
+}
 // For backward compatibility with existing components
 export type Post = WordPressPost;
 

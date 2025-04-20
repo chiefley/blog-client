@@ -18,8 +18,9 @@
   - User Role Editor
   - WP REST Cache
   - WP-REST-API V2 Menus
-  - WordPress REST API Authentication 
+  - WordPress REST API Authentication (disabled for now)
   - Better REST API Featured Image (see development details below)
+  - Max Mega Menu
 
 ## Development Details
 - Parsing info from Better REST Featured Image plugin.   This fix below was necessary as the signature is different than what was anticipated:
