@@ -8,14 +8,18 @@ export default defineConfig(({ mode }) => {
   // Load env file based on mode (development or production)
   const env = loadEnv(mode, process.cwd());
   
+  // Get the base path from environment variables
+  const basePath = env.VITE_BASE_PATH || '/';
+  console.log(`Building with base path: ${basePath} (mode: ${mode})`);
+  
   return {
     plugins: [
       react(),
       // Uncomment this for bundle analysis (creates stats.html)
       // visualizer({ open: true, gzipSize: true }),
     ],
-    // Use environment variable for base, with fallback to '/'
-    base: env.VITE_BASE_PATH || '/',
+    // Apply the base path configuration
+    base: basePath,
     build: {
       target: 'es2015',
       minify: 'terser',
@@ -45,16 +49,6 @@ export default defineConfig(({ mode }) => {
       hmr: true,
       port: 3000,
       open: true,
-    },
-    // Define environment variables to be available in your code
-    define: {
-      // If you need to expose all environment variables with VITE_ prefix
-      ...Object.keys(env).reduce((acc: Record<string, string>, key) => {
-        if (key.startsWith('VITE_')) {
-          acc[`import.meta.env.${key}`] = JSON.stringify(env[key]);
-        }
-        return acc;
-      }, {}),
     },
   };
 });

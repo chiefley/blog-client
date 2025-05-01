@@ -1,0 +1,51 @@
+# Enable rewriting
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /client/
+  
+  # Don't rewrite if the request is for an existing file or directory
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  
+  # Don't rewrite for certain file types
+  RewriteCond %{REQUEST_URI} !\.(?:js|css|png|jpg|jpeg|gif|ico|svg|woff2?)$ [NC]
+  
+  # For all other URLs, rewrite to index.html
+  RewriteRule ^ index.html [L]
+</IfModule>
+
+# Cache control for static assets
+<IfModule mod_expires.c>
+  ExpiresActive On
+  
+  # Images
+  ExpiresByType image/jpeg "access plus 1 year"
+  ExpiresByType image/gif "access plus 1 year"
+  ExpiresByType image/png "access plus 1 year"
+  ExpiresByType image/webp "access plus 1 year"
+  ExpiresByType image/svg+xml "access plus 1 year"
+  ExpiresByType image/x-icon "access plus 1 year"
+  
+  # CSS, JavaScript
+  ExpiresByType text/css "access plus 1 month"
+  ExpiresByType text/javascript "access plus 1 month"
+  ExpiresByType application/javascript "access plus 1 month"
+  
+  # Fonts
+  ExpiresByType font/woff "access plus 1 year"
+  ExpiresByType font/woff2 "access plus 1 year"
+  ExpiresByType application/font-woff "access plus 1 year"
+  ExpiresByType application/font-woff2 "access plus 1 year"
+</IfModule>
+
+# Add proper security headers
+<IfModule mod_headers.c>
+  # Disable content sniffing
+  Header set X-Content-Type-Options "nosniff"
+  
+  # Enable XSS protection
+  Header set X-XSS-Protection "1; mode=block"
+  
+  # Prevent clickjacking
+  Header set X-Frame-Options "SAMEORIGIN"
+</IfModule>
