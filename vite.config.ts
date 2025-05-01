@@ -32,6 +32,10 @@ export default defineConfig(({ mode }) => {
       },
       rollupOptions: {
         output: {
+          // Ensure asset filenames include the base directory
+          assetFileNames: 'assets/[name]-[hash].[ext]',
+          chunkFileNames: 'assets/[name]-[hash].js',
+          entryFileNames: 'assets/[name]-[hash].js',
           manualChunks: {
             'vendor-react': ['react', 'react-dom', 'react-router-dom'],
             'vendor-mui': ['@mui/material', '@mui/system'],

@@ -4,8 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build --mode=production",
+   "dev": "vite",
+    "build": "node deploy.js pre-build && tsc -b && vite build --mode=production --base=./ && node deploy.js post-build",
+    "clean": "node deploy.js pre-build",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest"
