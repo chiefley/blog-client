@@ -1,7 +1,8 @@
+
 # Enable rewriting
 <IfModule mod_rewrite.c>
   RewriteEngine On
-  RewriteBase /client/
+  RewriteBase /
   
   # Don't rewrite if the request is for an existing file or directory
   RewriteCond %{REQUEST_FILENAME} !-f
