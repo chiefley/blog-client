@@ -1,0 +1,91 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [ release ]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Deployment target (all, wa1x.thechief.com, applefinch.thechief.com)'
+        required: true
+        default: 'all'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Build
+      run: npm run build
+    
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-files
+        path: dist/
+        retention-days: 1
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    
+    # Add a matrix to deploy to different targets
+    strategy:
+      matrix:
+        include:
+          - target: wa1x.thechief.com
+            ftp_host: wa1x.thechief.com
+            ftp_user: ${{ secrets.FTP_USER_WA1X }}
+            ftp_password: ${{ secrets.FTP_PASS_WA1X }}
+            remote_path: /public_html/
+          - target: applefinch.thechief.com
+            ftp_host: applefinch.thechief.com
+            ftp_user: ${{ secrets.FTP_USER_APPLEFINCH }}
+            ftp_password: ${{ secrets.FTP_PASS_APPLEFINCH }}
+            remote_path: /public_html/
+    
+    # Skip this target if it's not requested
+    if: ${{ github.event.inputs.target == 'all' || github.event.inputs.target == matrix.target }}
+    
+    steps:
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: build-files
+        path: dist/
+    
+    # Checkout again to access the .htaccess file
+    - uses: actions/checkout@v4
+      with:
+        path: source
+    
+    - name: Copy .htaccess file
+      run: |
+        if [ -f "source/public/.htaccess" ]; then
+          cp source/public/.htaccess dist/
+          echo ".htaccess file successfully copied"
+        else
+          echo "Warning: No .htaccess file found in public directory!"
+          echo "SPA routing may not work correctly without a proper .htaccess file."
+        fi
+    
+    - name: Deploy to FTP
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ matrix.ftp_host }}
+        username: ${{ matrix.ftp_user }}
+        password: ${{ matrix.ftp_password }}
+        local-dir: ./dist/
+        server-dir: ${{ matrix.remote_path }}
+        dangerous-clean-slate: true

@@ -4,9 +4,16 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-   "dev": "vite",
-    "build": "node deploy.js pre-build && tsc -b && vite build --mode=production --base=./ && node deploy.js post-build",
+    "dev": "vite",
+    "build": "node deploy.js build",
     "clean": "node deploy.js pre-build",
+    "deploy": "node deploy.js deploy",
+    "deploy:wa1x": "node deploy.js deploy wa1x.thechief.com",
+    "deploy:applefinch": "node deploy.js deploy applefinch.thechief.com",
+    "deploy:all": "node deploy.js deploy all",
+    "full": "node deploy.js full",
+    "full:wa1x": "node deploy.js full wa1x.thechief.com",
+    "full:applefinch": "node deploy.js full applefinch.thechief.com",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest"
