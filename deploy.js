@@ -1,402 +1,125 @@
-// Function to check if WinSCP is installed (Windows)
-function isWinScpInstalled() {
-  try {
-    // Try both common executable names
-    try {
-      execSync('winscp.exe /version', { stdio: 'ignore' });
-      return 'winscp.exe';
-    } catch (e1) {
-      try {
-        execSync('winscp.com /version', { stdio: 'ignore' });
-        return 'winscp.com';
-      } catch (e2) {
-        try {
-          execSync('WinSCP.exe /version', { stdio: 'ignore' });
-          return 'WinSCP.exe';
-        } catch (e3) {
-          return false;
-        }
-      }
-    }
-  } catch (error) {
-    return false;
-  }
-}
+// deploy.js - Script for building and deploying XBlog React application
+/**
+ * XBlog Deployment Script - Windows Compatible Version
+ * 
+ * This script handles the complete build and deployment process for the XBlog application.
+ * It can build the React application and deploy it to multiple targets via FTP.
+ * 
+ * Usage:
+ *   node deploy.js build                        # Build only
+ *   node deploy.js pre-build                    # Clean build directories only
+ *   node deploy.js post-build                   # Run post-build tasks only
+ *   node deploy.js deploy [target]              # Deploy to one or all targets
+ *   node deploy.js full [target]                # Full build and deploy
+ */
 
-// Function to create WinSCP script (Windows)
-function createWinScpScript(targetConfig, deployDir) {
-  const scriptPath = path.join(deployDir, 'winscp_script.txt');
-  
-  // Build script content using the imported settings from FileZilla
-  // Format is slightly different to accommodate password special characters
-  const scriptContent = `# Automatically generated WinSCP script
-# Using FTPS with explicit TLS/SSL
-open ftps://${encodeURIComponent(targetConfig.ftpUser)}:${encodeURIComponent(targetConfig.ftpPass)}@${targetConfig.ftpHost}:21 -explicit -timeout=120 -certificate=* -rawsettings TlsCertificateVerification=0
-# Navigate to the correct remote directory
-cd "${targetConfig.remotePath}"
-# Set transfer options
-option batch continue
-option confirm off
-option transfer binary
-# Synchronize local to remote with deletion for removed files
-synchronize remote -delete -criteria=size,time "${deployDir.replace(/\\/g, '/')}" "."
-# Exit when done
-exit`;
-
-  writeFileSync(scriptPath, scriptContent);
-  return scriptPath;
-}// deploy.js - Deployment script for blog-client
-import { execSync } from 'child_process';
-import { existsSync, mkdirSync, rmSync, copyFileSync, readdirSync, writeFileSync } from 'fs';
+import { promises as fs, existsSync, mkdirSync } from 'fs';
 import path from 'path';
+import { execSync } from 'child_process';
 import { createInterface } from 'readline';
-import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 
-// Load environment variables from .env file
+// Load environment variables from .env file if present
 dotenv.config();
 
-// Determine current script directory
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Define directories
-const distDir = path.join(__dirname, 'dist');
-const publicDir = path.join(__dirname, 'public');
-const deployTempDir = path.join(__dirname, 'deploy-temp');
+// Define constants
+const DIST_DIR = path.resolve('./dist');
+const SRC_DIR = path.resolve('./src');
+const PUBLIC_DIR = path.resolve('./public');
+const DEPLOY_TEMP_DIR = path.resolve('./deploy-temp');
+const RL = createInterface({
+  input: process.stdin,
+  output: process.stdout
+});
 
 // Define deployment targets
 const targets = [
   {
     name: 'wa1x.thechief.com',
-    ftpHost: 'wa1x.thechief.com', // Adding ftp. prefix for standard FTP hostname
-    ftpUser: process.env.FTP_USER_WA1X || 'YOUR_USERNAME',
+    ftpHost: 'wa1x.thechief.com',
+    ftpUser: process.env.FTP_USER_WA1X || 'u598898806.wa1x.thechief.com',
     ftpPass: process.env.FTP_PASS_WA1X || 'YOUR_PASSWORD',
     remotePath: '/public_html/'
   },
   {
     name: 'applefinch.thechief.com',
-    ftpHost: 'applefinch.thechief.com', // Adding ftp. prefix for standard FTP hostname
-    ftpUser: process.env.FTP_USER_APPLEFINCH || 'YOUR_USERNAME',
+    ftpHost: 'applefinch.thechief.com',
+    ftpUser: process.env.FTP_USER_APPLEFINCH || 'u598898806.applefinch.thechief.com',
     ftpPass: process.env.FTP_PASS_APPLEFINCH || 'YOUR_PASSWORD',
     remotePath: '/public_html/'
   }
+  // Add more targets as needed
 ];
 
-// Create readline interface for user input
-const readline = createInterface({
-  input: process.stdin,
-  output: process.stdout
-});
-
-// Helper to prompt for user input
-const prompt = (question) => {
+/**
+ * Ask a yes/no question in the console
+ * @param {string} question - The question to ask
+ * @returns {Promise<boolean>} - True if the answer is 'y' or 'yes'
+ */
+function askQuestion(question) {
   return new Promise((resolve) => {
-    readline.question(question, (answer) => {
-      resolve(answer);
+    RL.question(`${question} (y/n): `, (answer) => {
+      resolve(answer.toLowerCase().startsWith('y'));
     });
   });
-};
-
-// Helper to copy directory recursively
-function copyDirRecursive(source, target) {
-  // Create target directory if it doesn't exist
-  if (!existsSync(target)) {
-    mkdirSync(target, { recursive: true });
-  }
-
-  // Get all files and directories in source
-  const entries = readdirSync(source, { withFileTypes: true });
-
-  for (const entry of entries) {
-    const sourcePath = path.join(source, entry.name);
-    const targetPath = path.join(target, entry.name);
-
-    if (entry.isDirectory()) {
-      // Recursive call for directories
-      copyDirRecursive(sourcePath, targetPath);
-    } else {
-      // Copy file
-      copyFileSync(sourcePath, targetPath);
-    }
-  }
 }
 
-// Function to create batch file (Windows)
-function createWindowsBatchScript(targetConfig, deployDir) {
-  const batchPath = path.join(deployDir, 'deploy.bat');
-  const batchContent = `@echo off
-echo === Manual deployment to ${targetConfig.name} ===
-echo.
-echo You need to upload all files in this directory to:
-echo Server: ${targetConfig.ftpHost}
-echo Username: ${targetConfig.ftpUser}
-echo Remote path: ${targetConfig.remotePath}
-echo.
-echo You can use any FTP client like FileZilla to do this.
-echo.
-pause`;
-
-  writeFileSync(batchPath, batchContent);
-  console.log(`Created Windows deployment script: deploy.bat`);
-  return batchPath;
-}
-
-// Function to create shell script (Unix)
-function createShellScript(targetConfig, deployDir) {
-  const shellPath = path.join(deployDir, 'deploy.sh');
-  const shellContent = `#!/bin/bash
-echo "=== Manual deployment to ${targetConfig.name} ==="
-echo
-echo "You need to upload all files in this directory to:"
-echo "Server: ${targetConfig.ftpHost}"
-echo "Username: ${targetConfig.ftpUser}"
-echo "Remote path: ${targetConfig.remotePath}"
-echo
-echo "You can use any FTP client like FileZilla to do this."
-echo
-read -p "Press Enter to continue..."`;
-
-  writeFileSync(shellPath, shellContent, { mode: 0o755 });
-  console.log(`Created Unix deployment script: deploy.sh`);
-  return shellPath;
-}
-
-// Pre-build tasks
-function preBuild() {
+/**
+ * Clean up the build directories
+ */
+async function preBuild() {
   console.log('=== Running pre-build tasks ===');
   
   // Clean the dist directory if it exists
-  if (existsSync(distDir)) {
+  if (existsSync(DIST_DIR)) {
     console.log('Cleaning dist directory...');
-    rmSync(distDir, { recursive: true, force: true });
+    try {
+      // Using fs.rm with recursive option for Node.js
+      await fs.rm(DIST_DIR, { recursive: true, force: true });
+    } catch (err) {
+      // Fallback for older Node.js versions - use execSync
+      if (process.platform === 'win32') {
+        execSync(`rmdir /s /q "${DIST_DIR}"`, { stdio: 'ignore' });
+      } else {
+        execSync(`rm -rf "${DIST_DIR}"`, { stdio: 'ignore' });
+      }
+    }
   }
   
   // Clean the deploy-temp directory if it exists
-  if (existsSync(deployTempDir)) {
+  if (existsSync(DEPLOY_TEMP_DIR)) {
     console.log('Cleaning deploy-temp directory...');
-    rmSync(deployTempDir, { recursive: true, force: true });
-  }
-}
-
-// Post-build tasks
-function postBuild() {
-  console.log('=== Running post-build tasks ===');
-
-  // Verify that the dist directory exists
-  if (!existsSync(distDir)) {
-    console.error('Error: Dist directory not found!');
-    process.exit(1);
-  }
-
-  // Copy all files from public directory to dist
-  console.log('Copying public files to dist directory...');
-  
-  if (existsSync(publicDir)) {
-    const entries = readdirSync(publicDir, { withFileTypes: true });
-    
-    for (const entry of entries) {
-      const sourcePath = path.join(publicDir, entry.name);
-      const targetPath = path.join(distDir, entry.name);
-      
-      if (entry.isDirectory()) {
-        copyDirRecursive(sourcePath, targetPath);
-      } else {
-        copyFileSync(sourcePath, targetPath);
-      }
-    }
-    
-    console.log('All public files copied to dist directory');
-  } else {
-    console.log('Public directory not found, skipping copy operation');
-  }
-}
-
-// Deploy to target using Node.js FTP
-async function deployToTarget(targetName) {
-  // If targetName is "all", deploy to all targets
-  if (targetName === 'all') {
-    for (const target of targets) {
-      await deployToTarget(target.name);
-    }
-    return;
-  }
-
-  // Find the target configuration
-  const targetConfig = targets.find(t => t.name === targetName);
-  if (!targetConfig) {
-    console.error(`Error: Target "${targetName}" not found!`);
-    process.exit(1);
-  }
-
-  console.log(`=== Deploying to ${targetName} ===`);
-
-  // Verify that the dist directory exists
-  if (!existsSync(distDir)) {
-    console.error('Error: Dist directory not found! Run build first.');
-    process.exit(1);
-  }
-
-  // Create target-specific deployment directory
-  const deployDir = path.join(deployTempDir, targetName);
-  if (existsSync(deployDir)) {
-    rmSync(deployDir, { recursive: true, force: true });
-  }
-  
-  // Copy build files to deployment directory
-  console.log('Copying build files to deployment directory...');
-  copyDirRecursive(distDir, deployDir);
-
-  // Create deployment scripts
-  const isWindows = process.platform === 'win32';
-  if (isWindows) {
-    createWindowsBatchScript(targetConfig, deployDir);
-  } else {
-    createShellScript(targetConfig, deployDir);
-  }
-
-  // Print deployment info
-  console.log(`Ready to deploy to ${targetName} via FTP.`);
-  console.log(`Server: ${targetConfig.ftpHost}`);
-  console.log(`Username: ${targetConfig.ftpUser}`);
-  console.log(`Remote path: ${targetConfig.remotePath}`);
-
-  // Print environment variable debug info
-  console.log('\nEnvironment variable check:');
-  console.log(`FTP_USER_WA1X defined: ${process.env.FTP_USER_WA1X ? 'Yes' : 'No'}`);
-  console.log(`FTP_PASS_WA1X defined: ${process.env.FTP_PASS_WA1X ? 'Yes' : 'No'}`);
-  console.log(`FTP_USER_APPLEFINCH defined: ${process.env.FTP_USER_APPLEFINCH ? 'Yes' : 'No'}`);
-  console.log(`FTP_PASS_APPLEFINCH defined: ${process.env.FTP_PASS_APPLEFINCH ? 'Yes' : 'No'}`);
-
-  // Ask user if they want to proceed with automatic upload
-  const answer = await prompt('Do you want to proceed with automatic FTP upload? (y/n): ');
-  
-  if (answer.toLowerCase() === 'y') {
-    console.log('Starting FTP upload via Node.js...');
-    
     try {
-      // Check if we're on Windows and use WinSCP directly (since we know it's installed)
-      const isWindows = process.platform === 'win32';
-      if (isWindows) {
-        console.log('Using WinSCP for deployment on Windows...');
-        
-        // Create WinSCP script file
-        const scriptPath = createWinScpScript(targetConfig, deployDir);
-        console.log(`WinSCP script created at: ${scriptPath}`);
-        
-        try {
-          // Try different WinSCP executable names
-          const winscpExecutables = ['winscp.exe', 'winscp.com', 'WinSCP.exe'];
-          let winscpExec = null;
-          
-          // Try to find which executable works
-          for (const exe of winscpExecutables) {
-            try {
-              console.log(`Trying WinSCP executable: ${exe}`);
-              execSync(`${exe} /version`, { stdio: 'pipe' });
-              winscpExec = exe;
-              console.log(`Found working WinSCP executable: ${winscpExec}`);
-              break;
-            } catch (e) {
-              console.log(`Executable ${exe} not found or not working`);
-            }
-          }
-          
-          if (!winscpExec) {
-            throw new Error('No working WinSCP executable found');
-          }
-          
-          // Execute WinSCP with the script
-          console.log('Starting WinSCP transfer...');
-          console.log(`Running command: ${winscpExec} /script="${scriptPath}"`);
-          
-          execSync(`${winscpExec} /script="${scriptPath}"`, { 
-            stdio: 'inherit',
-            timeout: 300000 // 5 minute timeout
-          });
-          console.log('WinSCP transfer completed successfully!');
-          return; // Exit the upload function after successful WinSCP operation
-        } catch (winscpError) {
-          console.error('WinSCP transfer failed:', winscpError.message);
-          console.log('Trying alternative FTP method...');
-        }
+      await fs.rm(DEPLOY_TEMP_DIR, { recursive: true, force: true });
+    } catch (err) {
+      // Fallback for older Node.js versions
+      if (process.platform === 'win32') {
+        execSync(`rmdir /s /q "${DEPLOY_TEMP_DIR}"`, { stdio: 'ignore' });
+      } else {
+        execSync(`rm -rf "${DEPLOY_TEMP_DIR}"`, { stdio: 'ignore' });
       }
-      
-      // Import basic-ftp dynamically to avoid requiring it for build-only operations
-      const { Client } = await import('basic-ftp');
-      const client = new Client();
-      client.ftp.verbose = true; // Enable verbose logging
-      
-      try {
-        console.log(`Connecting to FTP server: ${targetConfig.ftpHost}`);
-        
-        // Use explicit FTPS (FTP with TLS) like FileZilla does
-        await client.access({
-          host: targetConfig.ftpHost,
-          user: targetConfig.ftpUser,
-          password: targetConfig.ftpPass,
-          secure: true, // Use FTPS (FTP with TLS)
-          secureOptions: {
-            rejectUnauthorized: false // Accept self-signed certificates
-          },
-          port: 21
-        });
-        
-        console.log(`Connected to FTP server. Changing to directory: ${targetConfig.remotePath}`);
-        await client.ensureDir(targetConfig.remotePath);
-        
-        console.log('Starting upload of files...');
-        // Use the transfer mode that worked for the connection
-        // (passive or active, depending on which connection attempt succeeded)
-        await client.uploadFromDir(deployDir);
-        
-        console.log('FTP upload completed successfully!');
-      } catch (ftpError) {
-        console.error('FTP Error:', ftpError.message);
-        console.error('Please check your FTP credentials and server settings.');
-        
-        // Log details about the connection attempt
-        console.log('\nConnection details used:');
-        console.log(`- Host: ${targetConfig.ftpHost}`);
-        console.log(`- Username: ${targetConfig.ftpUser}`);
-        console.log('- Password: [hidden]');
-        console.log(`- Remote directory: ${targetConfig.remotePath}`);
-        console.log('- Security: FTPS (Explicit TLS/SSL)');
-        
-        console.log('\nTroubleshooting tips:');
-        console.log('1. Double-check that the .env file is in the project root directory');
-        console.log('2. Verify credentials match exactly what works in FileZilla');
-        console.log('3. Make sure you\'re using FTPS (Explicit TLS/SSL) in FileZilla');
-        console.log('4. Try modifying deploy.js to use a different TLS/SSL configuration');
-      } finally {
-        client.close();
-      }
-    } catch (importError) {
-      console.error('Error importing basic-ftp module:', importError.message);
-      console.log('Please install the basic-ftp package with:');
-      console.log('npm install basic-ftp');
     }
-  } else {
-    console.log('Automatic FTP upload skipped. To deploy manually:');
-    console.log(`1. Open the deploy-temp/${targetName} directory`);
-    console.log('2. Use an FTP client like FileZilla to upload all files to your server');
   }
+  
+  console.log('Build directories cleaned successfully!');
 }
 
-// Build the app
+/**
+ * Build the application
+ */
 async function buildApp() {
   console.log('=== Building application ===');
   
   try {
-    // Run TypeScript compiler
-    console.log('Running TypeScript compiler...');
+    // Compile TypeScript
+    console.log('Compiling TypeScript...');
     execSync('tsc -b', { stdio: 'inherit' });
     
-    // Run Vite build
+    // Build with Vite
     console.log('Running Vite build...');
     execSync('vite build --mode=production', { stdio: 'inherit' });
     
-    console.log('Build completed successfully!');
+    console.log('Application built successfully!');
     return true;
   } catch (error) {
     console.error('Build failed:', error.message);
@@ -404,51 +127,309 @@ async function buildApp() {
   }
 }
 
-// Main function
-async function main() {
-  const command = process.argv[2] || 'build';
-  const targetName = process.argv[3] || targets[0].name;
-  
+/**
+ * Run post-build tasks
+ */
+async function postBuild() {
+  console.log('=== Running post-build tasks ===');
+
+  // Verify that the dist directory exists
+  if (!existsSync(DIST_DIR)) {
+    console.error('Error: Dist directory not found! Did the build fail?');
+    return false;
+  }
+
   try {
-    switch (command) {
-      case 'pre-build':
-        preBuild();
-        break;
-        
-      case 'build':
-        preBuild();
-        const buildSuccess = await buildApp();
-        if (buildSuccess) {
-          postBuild();
-        }
-        break;
-        
-      case 'deploy':
-        await deployToTarget(targetName);
-        break;
-        
-      case 'full':
-        preBuild();
-        const fullBuildSuccess = await buildApp();
-        if (fullBuildSuccess) {
-          postBuild();
-          await deployToTarget(targetName);
-        }
-        break;
-        
-      default:
-        console.error(`Unknown command: ${command}`);
-        console.log('Available commands: pre-build, build, deploy, full');
-        process.exit(1);
-    }
+    // Copy all files from public folder to dist
+    console.log('Copying public files to dist...');
+    await copyDirectoryContents(PUBLIC_DIR, DIST_DIR);
+    
+    console.log('All public files copied to dist directory');
+    return true;
   } catch (error) {
-    console.error('Error:', error);
-    process.exit(1);
-  } finally {
-    // Close readline interface
-    readline.close();
+    console.error('Post-build tasks failed:', error.message);
+    return false;
   }
 }
 
-// Run the main function
+/**
+ * Copy all files from one directory to another
+ * @param {string} sourceDir - Source directory
+ * @param {string} targetDir - Target directory
+ */
+async function copyDirectoryContents(sourceDir, targetDir) {
+  // Skip if source directory doesn't exist
+  if (!existsSync(sourceDir)) {
+    console.log(`Source directory ${sourceDir} does not exist, skipping copy.`);
+    return;
+  }
+  
+  // Create target directory if it doesn't exist
+  if (!existsSync(targetDir)) {
+    mkdirSync(targetDir, { recursive: true });
+  }
+  
+  // Read the source directory
+  const entries = await fs.readdir(sourceDir, { withFileTypes: true });
+  
+  // Copy each entry
+  for (const entry of entries) {
+    const sourcePath = path.join(sourceDir, entry.name);
+    const targetPath = path.join(targetDir, entry.name);
+    
+    if (entry.isDirectory()) {
+      // Recursively copy directories
+      await copyDirectoryContents(sourcePath, targetPath);
+    } else {
+      // Copy files
+      await fs.copyFile(sourcePath, targetPath);
+    }
+  }
+}
+
+/**
+ * Create a WinSCP script file for deployment
+ * @param {object} target - The deployment target
+ * @param {string} localDir - The local directory to deploy from
+ * @param {string} tempFilesDir - Directory to store temporary files
+ * @returns {Promise<string>} - Path to the created script file
+ */
+async function createWinScpScript(target, localDir, tempFilesDir) {
+  // Create a WinSCP script file IN THE TEMP DIRECTORY (not in the deployment directory)
+  const scriptPath = path.join(tempFilesDir, '_winscp_script.txt');
+  
+  // The connection string format that worked: ftp://username:password@host/public_html/
+  // Create WinSCP script content with proper format
+  const scriptContent = `# WinSCP script for deployment
+# Generated automatically for ${target.name}
+option batch abort
+option confirm off
+open ftp://${target.ftpUser}:${target.ftpPass}@${target.ftpHost}${target.remotePath} -timeout=120 -rawsettings PassiveMode=1
+# Simply sync all files from the clean deployment directory
+synchronize remote -delete -criteria=time "${localDir.replace(/\\/g, '/')}" "${target.remotePath}"
+close
+exit
+`;
+  
+  // Write the script to a file IN THE TEMP DIRECTORY
+  await fs.writeFile(scriptPath, scriptContent);
+  
+  return scriptPath;
+}
+
+/**
+ * Deploy using WinSCP 
+ * @param {object} target - The deployment target
+ * @param {string} localDir - The local directory to deploy from
+ * @param {string} tempFilesDir - Directory to store temporary files
+ * @returns {Promise<boolean>} - Success status
+ */
+async function deployWithWinScp(target, localDir, tempFilesDir) {
+  try {
+    console.log('\nStarting deployment with WinSCP...');
+    
+    // Create WinSCP script IN THE TEMP DIRECTORY
+    const scriptPath = await createWinScpScript(target, localDir, tempFilesDir);
+    
+    console.log(`WinSCP script created at: ${scriptPath}`);
+    console.log(`Connection string: ftp://${target.ftpUser}:******@${target.ftpHost}${target.remotePath}`);
+    
+    try {
+      // Run WinSCP with the script
+      console.log('Executing WinSCP with script...');
+      execSync(`winscp.com /script="${scriptPath}"`, { 
+        stdio: 'inherit'
+      });
+      
+      console.log(`\n✅ Deployment to ${target.name} completed successfully!`);
+      
+      // No need to clean up individual files as we'll clean up the entire temp directory later
+      
+      return true;
+    } catch (execError) {
+      console.error(`\n❌ WinSCP command failed: ${execError.message}`);
+      throw execError;
+    }
+  } catch (error) {
+    console.error('Error using WinSCP:', error.message);
+    console.log('\nManual deployment instructions:');
+    console.log(`1. Navigate to ${localDir}`);
+    console.log(`2. Use WinSCP to upload all files to your server`);
+    console.log(`3. Use this connection string: ftp://${target.ftpUser}:PASSWORD@${target.ftpHost}${target.remotePath}`);
+    
+    return false;
+  }
+}
+
+/**
+ * Deploy to a specific target
+ * @param {object} target - The deployment target
+ */
+async function deployToTarget(target) {
+  console.log(`=== Deploying to ${target.name} ===`);
+  
+  // Create deploy-temp directory for this target
+  const targetDir = path.join(DEPLOY_TEMP_DIR, target.name);
+  
+  // Create a separate directory for temporary deployment files
+  const tempFilesDir = path.join(DEPLOY_TEMP_DIR, `_temp_${target.name}`);
+  
+  try {
+    // Create target directory
+    if (!existsSync(targetDir)) {
+      mkdirSync(targetDir, { recursive: true });
+    }
+    
+    // Create temporary files directory
+    if (!existsSync(tempFilesDir)) {
+      mkdirSync(tempFilesDir, { recursive: true });
+    }
+    
+    // Copy build files to deployment directory
+    console.log('Copying build files to deployment directory...');
+    await copyDirectoryContents(DIST_DIR, targetDir);
+    
+    console.log(`Ready to deploy to ${target.name} via FTP.`);
+    console.log(`Server: ${target.ftpHost}`);
+    console.log(`Username: ${target.ftpUser}`);
+    console.log(`Remote path: ${target.remotePath}`);
+    
+    // Ask for confirmation before FTP upload
+    const proceedWithFtp = await askQuestion('\nDo you want to proceed with automatic FTP upload?');
+    
+    if (proceedWithFtp) {
+      // Try with WinSCP
+      let success = false;
+      
+      try {
+        success = await deployWithWinScp(target, targetDir, tempFilesDir);
+      } catch (error) {
+        console.error(`\n❌ WinSCP deployment failed: ${error.message}`);
+      }
+      
+      if (!success) {
+        console.log('\nManual deployment instructions:');
+        console.log(`1. Navigate to ${targetDir}`);
+        console.log(`2. Use your FTP client to upload all files to your server`);
+        console.log(`3. Connection string: ftp://${target.ftpUser}:PASSWORD@${target.ftpHost}${target.remotePath}`);
+      }
+    } else {
+      console.log('\nManual deployment instructions:');
+      console.log(`1. Navigate to ${targetDir}`);
+      console.log(`2. Use your FTP client to upload all files to your server`);
+      console.log(`3. Connection string: ftp://${target.ftpUser}:PASSWORD@${target.ftpHost}${target.remotePath}`);
+    }
+  } catch (error) {
+    console.error(`Deployment preparation for ${target.name} failed:`, error.message);
+  } finally {
+    // Clean up the temporary files directory
+    if (existsSync(tempFilesDir)) {
+      try {
+        await fs.rm(tempFilesDir, { recursive: true, force: true });
+      } catch (err) {
+        console.log(`Warning: Could not clean up temporary files directory: ${err.message}`);
+      }
+    }
+  }
+}
+
+/**
+ * Main function to run the script
+ */
+async function main() {
+  try {
+    // Get command line arguments
+    const args = process.argv.slice(2);
+    const command = args[0] || 'help';
+    const targetName = args[1];
+    
+    // If specific target is provided, verify it exists
+    let selectedTargets = [];
+    if (targetName && targetName !== 'all') {
+      const target = targets.find(t => t.name === targetName);
+      if (!target) {
+        console.error(`Error: Target "${targetName}" not found!`);
+        console.log('Available targets:');
+        targets.forEach(t => console.log(`  - ${t.name}`));
+        process.exit(1);
+      }
+      selectedTargets = [target];
+    } else {
+      selectedTargets = targets;
+    }
+    
+    // Execute the appropriate command
+    switch (command) {
+      case 'pre-build':
+        await preBuild();
+        break;
+        
+      case 'build':
+        await preBuild();
+        const buildSuccess = await buildApp();
+        if (buildSuccess) {
+          await postBuild();
+        }
+        break;
+        
+      case 'post-build':
+        await postBuild();
+        break;
+        
+      case 'deploy':
+        // Check if dist directory exists
+        if (!existsSync(DIST_DIR)) {
+          console.error('Error: dist directory not found! Run build command first.');
+          process.exit(1);
+        }
+        
+        for (const target of selectedTargets) {
+          await deployToTarget(target);
+        }
+        break;
+        
+      case 'full':
+        await preBuild();
+        const fullBuildSuccess = await buildApp();
+        if (fullBuildSuccess) {
+          await postBuild();
+          
+          for (const target of selectedTargets) {
+            await deployToTarget(target);
+          }
+        }
+        break;
+        
+      case 'help':
+      default:
+        console.log(`
+XBlog Deployment Script
+
+Usage:
+  node deploy.js build                        # Build only
+  node deploy.js pre-build                    # Clean build directories only
+  node deploy.js post-build                   # Run post-build tasks only
+  node deploy.js deploy [target]              # Deploy to one or all targets
+  node deploy.js full [target]                # Full build and deploy
+
+Examples:
+  node deploy.js deploy wa1x.thechief.com     # Deploy to wa1x.thechief.com
+  node deploy.js full applefinch.thechief.com # Build and deploy to applefinch
+  node deploy.js full                         # Build and deploy to all targets
+
+Available targets:
+${targets.map(t => `  - ${t.name}`).join('\n')}
+        `);
+        break;
+    }
+  } catch (error) {
+    console.error('Script execution failed:', error);
+    process.exit(1);
+  } finally {
+    // Close the readline interface
+    RL.close();
+  }
+}
+
+// Run the script
 main();
