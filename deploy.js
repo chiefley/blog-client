@@ -1,14 +1,11 @@
-// deploy.js - Script for building and deploying XBlog React application
+// deploy.js - Simplified deployment script for XBlog
 /**
- * XBlog Deployment Script - Windows Compatible Version
+ * XBlog Deployment Script - Simplified Version
  * 
- * This script handles the complete build and deployment process for the XBlog application.
- * It can build the React application and deploy it to multiple targets via FTP.
+ * This script builds the React application and deploys it directly from the dist directory.
  * 
  * Usage:
  *   node deploy.js build                        # Build only
- *   node deploy.js pre-build                    # Clean build directories only
- *   node deploy.js post-build                   # Run post-build tasks only
  *   node deploy.js deploy [target]              # Deploy to one or all targets
  *   node deploy.js full [target]                # Full build and deploy
  */
@@ -24,9 +21,8 @@ dotenv.config();
 
 // Define constants
 const DIST_DIR = path.resolve('./dist');
-const SRC_DIR = path.resolve('./src');
 const PUBLIC_DIR = path.resolve('./public');
-const DEPLOY_TEMP_DIR = path.resolve('./deploy-temp');
+const DEPLOY_SCRIPTS_DIR = path.resolve('./deploy-scripts');
 const RL = createInterface({
   input: process.stdin,
   output: process.stdout
@@ -48,7 +44,6 @@ const targets = [
     ftpPass: process.env.FTP_PASS_APPLEFINCH || 'YOUR_PASSWORD',
     remotePath: '/public_html/'
   }
-  // Add more targets as needed
 ];
 
 /**
@@ -67,14 +62,13 @@ function askQuestion(question) {
 /**
  * Clean up the build directories
  */
-async function preBuild() {
-  console.log('=== Running pre-build tasks ===');
+async function cleanDirectories() {
+  console.log('=== Cleaning directories ===');
   
   // Clean the dist directory if it exists
   if (existsSync(DIST_DIR)) {
     console.log('Cleaning dist directory...');
     try {
-      // Using fs.rm with recursive option for Node.js
       await fs.rm(DIST_DIR, { recursive: true, force: true });
     } catch (err) {
       // Fallback for older Node.js versions - use execSync
@@ -86,22 +80,24 @@ async function preBuild() {
     }
   }
   
-  // Clean the deploy-temp directory if it exists
-  if (existsSync(DEPLOY_TEMP_DIR)) {
-    console.log('Cleaning deploy-temp directory...');
+  // Clean the deploy-scripts directory if it exists
+  if (existsSync(DEPLOY_SCRIPTS_DIR)) {
+    console.log('Cleaning deploy-scripts directory...');
     try {
-      await fs.rm(DEPLOY_TEMP_DIR, { recursive: true, force: true });
+      await fs.rm(DEPLOY_SCRIPTS_DIR, { recursive: true, force: true });
     } catch (err) {
-      // Fallback for older Node.js versions
       if (process.platform === 'win32') {
-        execSync(`rmdir /s /q "${DEPLOY_TEMP_DIR}"`, { stdio: 'ignore' });
+        execSync(`rmdir /s /q "${DEPLOY_SCRIPTS_DIR}"`, { stdio: 'ignore' });
       } else {
-        execSync(`rm -rf "${DEPLOY_TEMP_DIR}"`, { stdio: 'ignore' });
+        execSync(`rm -rf "${DEPLOY_SCRIPTS_DIR}"`, { stdio: 'ignore' });
       }
     }
   }
   
-  console.log('Build directories cleaned successfully!');
+  // Create deploy-scripts directory
+  mkdirSync(DEPLOY_SCRIPTS_DIR, { recursive: true });
+  
+  console.log('Directories cleaned successfully!');
 }
 
 /**
@@ -119,6 +115,16 @@ async function buildApp() {
     console.log('Running Vite build...');
     execSync('vite build --mode=production', { stdio: 'inherit' });
     
+    // Verify that the dist directory exists
+    if (!existsSync(DIST_DIR)) {
+      console.error('Error: Dist directory not found after build!');
+      return false;
+    }
+    
+    // Copy all files from public folder to dist
+    console.log('Copying public files to dist...');
+    await copyPublicFiles();
+    
     console.log('Application built successfully!');
     return true;
   } catch (error) {
@@ -128,42 +134,46 @@ async function buildApp() {
 }
 
 /**
- * Run post-build tasks
+ * Copy files from public directory to dist
  */
-async function postBuild() {
-  console.log('=== Running post-build tasks ===');
-
-  // Verify that the dist directory exists
-  if (!existsSync(DIST_DIR)) {
-    console.error('Error: Dist directory not found! Did the build fail?');
-    return false;
-  }
-
-  try {
-    // Copy all files from public folder to dist
-    console.log('Copying public files to dist...');
-    await copyDirectoryContents(PUBLIC_DIR, DIST_DIR);
-    
-    console.log('All public files copied to dist directory');
-    return true;
-  } catch (error) {
-    console.error('Post-build tasks failed:', error.message);
-    return false;
-  }
-}
-
-/**
- * Copy all files from one directory to another
- * @param {string} sourceDir - Source directory
- * @param {string} targetDir - Target directory
- */
-async function copyDirectoryContents(sourceDir, targetDir) {
-  // Skip if source directory doesn't exist
-  if (!existsSync(sourceDir)) {
-    console.log(`Source directory ${sourceDir} does not exist, skipping copy.`);
+async function copyPublicFiles() {
+  // Skip if public directory doesn't exist
+  if (!existsSync(PUBLIC_DIR)) {
+    console.log(`Public directory ${PUBLIC_DIR} does not exist, skipping copy.`);
     return;
   }
   
+  // Ensure dist directory exists
+  if (!existsSync(DIST_DIR)) {
+    mkdirSync(DIST_DIR, { recursive: true });
+  }
+  
+  // Read the public directory
+  const entries = await fs.readdir(PUBLIC_DIR, { withFileTypes: true });
+  
+  // Copy each entry
+  for (const entry of entries) {
+    const sourcePath = path.join(PUBLIC_DIR, entry.name);
+    const targetPath = path.join(DIST_DIR, entry.name);
+    
+    if (entry.isDirectory()) {
+      // Recursively copy directories
+      await copyDirectory(sourcePath, targetPath);
+    } else {
+      // Copy files
+      await fs.copyFile(sourcePath, targetPath);
+    }
+  }
+  
+  console.log('All public files copied to dist directory');
+}
+
+/**
+ * Recursively copy a directory
+ * @param {string} sourceDir - Source directory
+ * @param {string} targetDir - Target directory
+ */
+async function copyDirectory(sourceDir, targetDir) {
   // Create target directory if it doesn't exist
   if (!existsSync(targetDir)) {
     mkdirSync(targetDir, { recursive: true });
@@ -179,7 +189,7 @@ async function copyDirectoryContents(sourceDir, targetDir) {
     
     if (entry.isDirectory()) {
       // Recursively copy directories
-      await copyDirectoryContents(sourcePath, targetPath);
+      await copyDirectory(sourcePath, targetPath);
     } else {
       // Copy files
       await fs.copyFile(sourcePath, targetPath);
@@ -190,46 +200,37 @@ async function copyDirectoryContents(sourceDir, targetDir) {
 /**
  * Create a WinSCP script file for deployment
  * @param {object} target - The deployment target
- * @param {string} localDir - The local directory to deploy from
- * @param {string} tempFilesDir - Directory to store temporary files
  * @returns {Promise<string>} - Path to the created script file
  */
-async function createWinScpScript(target, localDir, tempFilesDir) {
-  // Create a WinSCP script file IN THE TEMP DIRECTORY (not in the deployment directory)
-  const scriptPath = path.join(tempFilesDir, '_winscp_script.txt');
+async function createWinScpScript(target) {
+  const scriptPath = path.join(DEPLOY_SCRIPTS_DIR, `winscp_${target.name.replace(/\./g, '_')}.txt`);
   
-  // The connection string format that worked: ftp://username:password@host/public_html/
-  // Create WinSCP script content with proper format
   const scriptContent = `# WinSCP script for deployment
 # Generated automatically for ${target.name}
 option batch abort
 option confirm off
 open ftp://${target.ftpUser}:${target.ftpPass}@${target.ftpHost}${target.remotePath} -timeout=120 -rawsettings PassiveMode=1
-# Simply sync all files from the clean deployment directory
-synchronize remote -delete -criteria=time "${localDir.replace(/\\/g, '/')}" "${target.remotePath}"
+# Simply sync all files from the dist directory directly
+synchronize remote -delete -criteria=time "${DIST_DIR.replace(/\\/g, '/')}" "${target.remotePath}"
 close
 exit
 `;
   
-  // Write the script to a file IN THE TEMP DIRECTORY
   await fs.writeFile(scriptPath, scriptContent);
-  
   return scriptPath;
 }
 
 /**
- * Deploy using WinSCP 
+ * Deploy using WinSCP
  * @param {object} target - The deployment target
- * @param {string} localDir - The local directory to deploy from
- * @param {string} tempFilesDir - Directory to store temporary files
  * @returns {Promise<boolean>} - Success status
  */
-async function deployWithWinScp(target, localDir, tempFilesDir) {
+async function deployWithWinScp(target) {
   try {
     console.log('\nStarting deployment with WinSCP...');
     
-    // Create WinSCP script IN THE TEMP DIRECTORY
-    const scriptPath = await createWinScpScript(target, localDir, tempFilesDir);
+    // Create WinSCP script
+    const scriptPath = await createWinScpScript(target);
     
     console.log(`WinSCP script created at: ${scriptPath}`);
     console.log(`Connection string: ftp://${target.ftpUser}:******@${target.ftpHost}${target.remotePath}`);
@@ -242,9 +243,6 @@ async function deployWithWinScp(target, localDir, tempFilesDir) {
       });
       
       console.log(`\n✅ Deployment to ${target.name} completed successfully!`);
-      
-      // No need to clean up individual files as we'll clean up the entire temp directory later
-      
       return true;
     } catch (execError) {
       console.error(`\n❌ WinSCP command failed: ${execError.message}`);
@@ -253,12 +251,49 @@ async function deployWithWinScp(target, localDir, tempFilesDir) {
   } catch (error) {
     console.error('Error using WinSCP:', error.message);
     console.log('\nManual deployment instructions:');
-    console.log(`1. Navigate to ${localDir}`);
+    console.log(`1. Navigate to ${DIST_DIR}`);
     console.log(`2. Use WinSCP to upload all files to your server`);
     console.log(`3. Use this connection string: ftp://${target.ftpUser}:PASSWORD@${target.ftpHost}${target.remotePath}`);
     
     return false;
   }
+}
+
+/**
+ * Create a manual deployment batch file
+ * @param {object} target - The deployment target 
+ * @returns {Promise<string>} - Path to the created batch file
+ */
+async function createManualDeploymentFile(target) {
+  const batchPath = path.join(DEPLOY_SCRIPTS_DIR, `manual_deploy_${target.name.replace(/\./g, '_')}.bat`);
+  
+  const batchContent = `@echo off
+echo ===================================================
+echo Manual Deployment Script for ${target.name}
+echo ===================================================
+echo.
+echo This script will help you deploy the files to your server.
+echo.
+echo 1. Open your FTP client (like FileZilla)
+echo 2. Use these connection details:
+echo    Host: ${target.ftpHost}
+echo    Username: ${target.ftpUser}
+echo    Password: (use the password from your .env file)
+echo    Port: 21
+echo.
+echo 3. Local directory to upload: 
+echo    ${DIST_DIR}
+echo.
+echo 4. Remote directory:
+echo    ${target.remotePath}
+echo.
+echo ===================================================
+echo.
+pause
+`;
+  
+  await fs.writeFile(batchPath, batchContent);
+  return batchPath;
 }
 
 /**
@@ -268,68 +303,48 @@ async function deployWithWinScp(target, localDir, tempFilesDir) {
 async function deployToTarget(target) {
   console.log(`=== Deploying to ${target.name} ===`);
   
-  // Create deploy-temp directory for this target
-  const targetDir = path.join(DEPLOY_TEMP_DIR, target.name);
-  
-  // Create a separate directory for temporary deployment files
-  const tempFilesDir = path.join(DEPLOY_TEMP_DIR, `_temp_${target.name}`);
+  // Check if dist directory exists
+  if (!existsSync(DIST_DIR)) {
+    console.error('Error: dist directory not found! Run build command first.');
+    return false;
+  }
   
   try {
-    // Create target directory
-    if (!existsSync(targetDir)) {
-      mkdirSync(targetDir, { recursive: true });
-    }
-    
-    // Create temporary files directory
-    if (!existsSync(tempFilesDir)) {
-      mkdirSync(tempFilesDir, { recursive: true });
-    }
-    
-    // Copy build files to deployment directory
-    console.log('Copying build files to deployment directory...');
-    await copyDirectoryContents(DIST_DIR, targetDir);
-    
     console.log(`Ready to deploy to ${target.name} via FTP.`);
     console.log(`Server: ${target.ftpHost}`);
     console.log(`Username: ${target.ftpUser}`);
     console.log(`Remote path: ${target.remotePath}`);
+    console.log(`Source directory: ${DIST_DIR}`);
     
     // Ask for confirmation before FTP upload
     const proceedWithFtp = await askQuestion('\nDo you want to proceed with automatic FTP upload?');
     
     if (proceedWithFtp) {
-      // Try with WinSCP
       let success = false;
       
       try {
-        success = await deployWithWinScp(target, targetDir, tempFilesDir);
+        success = await deployWithWinScp(target);
       } catch (error) {
         console.error(`\n❌ WinSCP deployment failed: ${error.message}`);
       }
       
       if (!success) {
         console.log('\nManual deployment instructions:');
-        console.log(`1. Navigate to ${targetDir}`);
+        console.log(`1. Navigate to ${DIST_DIR}`);
         console.log(`2. Use your FTP client to upload all files to your server`);
         console.log(`3. Connection string: ftp://${target.ftpUser}:PASSWORD@${target.ftpHost}${target.remotePath}`);
       }
     } else {
       console.log('\nManual deployment instructions:');
-      console.log(`1. Navigate to ${targetDir}`);
+      console.log(`1. Navigate to ${DIST_DIR}`);
       console.log(`2. Use your FTP client to upload all files to your server`);
       console.log(`3. Connection string: ftp://${target.ftpUser}:PASSWORD@${target.ftpHost}${target.remotePath}`);
     }
+    
+    return success;
   } catch (error) {
-    console.error(`Deployment preparation for ${target.name} failed:`, error.message);
-  } finally {
-    // Clean up the temporary files directory
-    if (existsSync(tempFilesDir)) {
-      try {
-        await fs.rm(tempFilesDir, { recursive: true, force: true });
-      } catch (err) {
-        console.log(`Warning: Could not clean up temporary files directory: ${err.message}`);
-      }
-    }
+    console.error(`Deployment for ${target.name} failed:`, error.message);
+    return false;
   }
 }
 
@@ -360,20 +375,9 @@ async function main() {
     
     // Execute the appropriate command
     switch (command) {
-      case 'pre-build':
-        await preBuild();
-        break;
-        
       case 'build':
-        await preBuild();
-        const buildSuccess = await buildApp();
-        if (buildSuccess) {
-          await postBuild();
-        }
-        break;
-        
-      case 'post-build':
-        await postBuild();
+        await cleanDirectories();
+        await buildApp();
         break;
         
       case 'deploy':
@@ -383,19 +387,34 @@ async function main() {
           process.exit(1);
         }
         
+        // Ensure deploy-scripts directory exists and is clean
+        if (existsSync(DEPLOY_SCRIPTS_DIR)) {
+          await fs.rm(DEPLOY_SCRIPTS_DIR, { recursive: true, force: true });
+        }
+        mkdirSync(DEPLOY_SCRIPTS_DIR, { recursive: true });
+        
+        // Deploy to each selected target
         for (const target of selectedTargets) {
           await deployToTarget(target);
+          
+          // Create manual deployment file for reference
+          const manualBatchPath = await createManualDeploymentFile(target);
+          console.log(`Manual deployment batch file created: ${manualBatchPath}`);
         }
         break;
         
       case 'full':
-        await preBuild();
-        const fullBuildSuccess = await buildApp();
-        if (fullBuildSuccess) {
-          await postBuild();
-          
+        await cleanDirectories();
+        const buildSuccess = await buildApp();
+        
+        if (buildSuccess) {
+          // Deploy to each selected target
           for (const target of selectedTargets) {
             await deployToTarget(target);
+            
+            // Create manual deployment file for reference
+            const manualBatchPath = await createManualDeploymentFile(target);
+            console.log(`Manual deployment batch file created: ${manualBatchPath}`);
           }
         }
         break;
@@ -403,12 +422,10 @@ async function main() {
       case 'help':
       default:
         console.log(`
-XBlog Deployment Script
+XBlog Deployment Script - Simplified Version
 
 Usage:
   node deploy.js build                        # Build only
-  node deploy.js pre-build                    # Clean build directories only
-  node deploy.js post-build                   # Run post-build tasks only
   node deploy.js deploy [target]              # Deploy to one or all targets
   node deploy.js full [target]                # Full build and deploy
 

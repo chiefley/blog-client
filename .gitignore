@@ -52,4 +52,5 @@ bld/
 .env
 deploy-temp/
 /deploy-temp/
+/deploy-scripts
 
