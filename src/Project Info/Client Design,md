@@ -55,9 +55,8 @@ This document summarizes the design decisions for a React-based blog network tha
 - Tag-based navigation with visual indicators
 
 ## API Access
-- All api structures specified in an interface.ts file.
+- All api structures specified in an interface.ts files.
 - All requests and responses go through a single wordpressApi.ts file.
-- Auth is handled by an authService.ts.
 
 ### Mobile Considerations
 - Sidebar collapses to a toggle-able drawer on mobile devices

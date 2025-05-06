@@ -76,7 +76,8 @@ const App: React.FC = () => {
                       <Route path="/posts/category/:slug" element={<CategoryPosts />} />
                       <Route path="/posts/tag/:slug" element={<TagPosts />} />
                       <Route path="/post/:slug" element={<PostDetail />} />
-                      {/* Add other routes as needed */}
+                      {/* Add a fallback route that redirects to home */}
+                      <Route path="*" element={<Home />} />
                     </Routes>
                   </Suspense>
                 </Grid>

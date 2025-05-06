@@ -2,7 +2,6 @@
  - Headless WordPress hosted at Hostinger at https://wpcms.thechief.com under a Premium plan.
 - WordPress multisite capability to support multiple blogs (domain1.com/blog1, domain2.com/blo2, etc.)
 - Currently, three blogs:  wa1x, applefinch, and the default headless site.
-- API uses Basic Authentication base64 for security.  A dedicated user in WP is used by the client to gain access.
 
 ## WordPress Plugins
   - ACF to REST API

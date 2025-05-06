@@ -1,7 +1,9 @@
-
 # Enable rewriting
 <IfModule mod_rewrite.c>
   RewriteEngine On
+  
+  # Use RewriteBase / for the root domain
+  # No trailing slash is needed
   RewriteBase /
   
   # Don't rewrite if the request is for an existing file or directory

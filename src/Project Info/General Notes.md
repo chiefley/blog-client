@@ -11,7 +11,7 @@ I have very little front-end experience except for Winforms and Blazor.  I have 
 ## Technology Stack
 - Frontend: React with TypeScript and Material UI, Vite components
 - Backend: Wordpress as headless CMS hosted at Hostinger.com
-- Hosting: Vercel for the React frontend, WordPress.com for the backend
+- Hosting: Client is also hosted at Hostinger.
 - Architecture: Headless CMS approach using WordPress REST API
 
 ### Frontend
@@ -20,19 +20,15 @@ I have very little front-end experience except for Winforms and Blazor.  I have 
 - Adopting Material UI for a polished, professional look
 - Componentized design with services for API access
 - Unit tests using Vitest framework.
-- Hosting at Vercel connected to Github/main branch.
-- URL at Vercel is https://blog-client-three-psi.vercel.app
+- Hosting at Hostinger,
 - Domain thechief.com is kept at Network Solutions
-- Domain netservers now point to a proxy domain at Cloudshare.
 
 ### Backend & Hosting
-- Wordpress Premium plan at Hostinger.com to enable full REST API access
+- Wordpress Business plan at Hostinger.com to enable full REST API access
 - Currently hosted at https://wpcms.thechief.com.
 - WordPress multisite capability to support multiple blogs (domain1.com/blog1, domain2.com/blo2, etc.)
 - WP is configured for three sites: wa1x, applefinch, and the default headless site for development.
 - WA1X is a ham radio blog.   Applefinch is a blog about science and the scientific method.
-- Vercel hosting for the frontend (connects to GitHub, generous free tier)
-
 - I am the only admin since all the blogs will be mine.
 - I will use the Wordpress Admin for all configuration and content management.
 
