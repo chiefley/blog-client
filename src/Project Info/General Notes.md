@@ -33,7 +33,7 @@ I have very little front-end experience except for Winforms and Blazor.  I have 
 - I will use the Wordpress Admin for all configuration and content management.
 
 ### Development Approach
-- Using Visual Code for development.
+- Using Webstorm for development.
 - Using cmd window to run npm commands.
 - Creating discrete components and services using Vite components.
 - Leveraging TypeScript interfaces for WordPress API responses

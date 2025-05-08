@@ -53,6 +53,9 @@ The `.htaccess` file plays a crucial role in making the SPA (Single Page Applica
 # Enable rewriting
 <IfModule mod_rewrite.c>
   RewriteEngine On
+  
+  # Use RewriteBase / for the root domain
+  # No trailing slash is needed
   RewriteBase /
   
   # Don't rewrite if the request is for an existing file or directory
@@ -64,6 +67,42 @@ The `.htaccess` file plays a crucial role in making the SPA (Single Page Applica
   
   # For all other URLs, rewrite to index.html
   RewriteRule ^ index.html [L]
+</IfModule>
+
+# Cache control for static assets
+<IfModule mod_expires.c>
+  ExpiresActive On
+  
+  # Images
+  ExpiresByType image/jpeg "access plus 1 year"
+  ExpiresByType image/gif "access plus 1 year"
+  ExpiresByType image/png "access plus 1 year"
+  ExpiresByType image/webp "access plus 1 year"
+  ExpiresByType image/svg+xml "access plus 1 year"
+  ExpiresByType image/x-icon "access plus 1 year"
+  
+  # CSS, JavaScript
+  ExpiresByType text/css "access plus 1 month"
+  ExpiresByType text/javascript "access plus 1 month"
+  ExpiresByType application/javascript "access plus 1 month"
+  
+  # Fonts
+  ExpiresByType font/woff "access plus 1 year"
+  ExpiresByType font/woff2 "access plus 1 year"
+  ExpiresByType application/font-woff "access plus 1 year"
+  ExpiresByType application/font-woff2 "access plus 1 year"
+</IfModule>
+
+# Add proper security headers
+<IfModule mod_headers.c>
+  # Disable content sniffing
+  Header set X-Content-Type-Options "nosniff"
+  
+  # Enable XSS protection
+  Header set X-XSS-Protection "1; mode=block"
+  
+  # Prevent clickjacking
+  Header set X-Frame-Options "SAMEORIGIN"
 </IfModule>
 ```
 
@@ -125,37 +164,91 @@ The deployment process follows these steps:
 The `vite.config.ts` file is configured to optimize the build process for deployment:
 
 ```typescript
+// vite.config.ts
+import { defineConfig, loadEnv } from 'vite';
+import react from '@vitejs/plugin-react'; // Using Babel for Fast Refresh
+// Import visualizer only when needed (commented out to avoid unused import error)
+// import { visualizer } from 'rollup-plugin-visualizer';
+
 export default defineConfig(({ mode }) => {
-  // Load env file based on mode (development or production)
-  const env = loadEnv(mode, process.cwd());
-  
-  // Get the base path from environment variables
-  const basePath = env.VITE_BASE_PATH || '/';
-  
-  return {
-    plugins: [react()],
-    // Apply the base path configuration
-    base: basePath,
-    build: {
-      // Build configurations for optimization
-      rollupOptions: {
-        output: {
-          // Asset naming strategies for caching
-          assetFileNames: 'assets/[name]-[hash].[ext]',
-          chunkFileNames: 'assets/[name]-[hash].js',
-          entryFileNames: 'assets/[name]-[hash].js',
-          // Manual chunk splitting for optimization
-          manualChunks: {
-            'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-            'vendor-mui': ['@mui/material', '@mui/system'],
-            'vendor-mui-icons': ['@mui/icons-material'],
-            'vendor-utils': ['date-fns', 'html-react-parser'],
-          },
-        },
+   // Load env file based on mode (development or production)
+   const env = loadEnv(mode, process.cwd());
+
+   // Get the base path from environment variables
+   const basePath = env.VITE_BASE_PATH || '/';
+   console.log(`Building with base path: ${basePath} (mode: ${mode})`);
+
+   return {
+      plugins: [
+         react({
+            // Babel configuration options
+            babel: {
+               plugins: [
+                  // Add any Babel plugins you need here
+               ],
+               // Don't transpile dynamic imports to get proper code splitting
+               babelrc: false,
+               configFile: false
+            },
+         }),
+         // Uncomment this for bundle analysis (creates stats.html)
+         // visualizer({ open: true, gzipSize: true }),
+      ],
+      // Apply the base path configuration
+      base: basePath,
+      build: {
+         target: 'es2015',
+         minify: 'terser',
+         terserOptions: {
+            compress: {
+               // Remove console.log in production
+               drop_console: mode === 'production',
+               drop_debugger: mode === 'production',
+            },
+         },
+         rollupOptions: {
+            output: {
+               // Ensure asset filenames include the base directory
+               assetFileNames: 'assets/[name]-[hash].[ext]',
+               chunkFileNames: 'assets/[name]-[hash].js',
+               entryFileNames: 'assets/[name]-[hash].js',
+               manualChunks: {
+                  'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+                  'vendor-mui': ['@mui/material', '@mui/system'],
+                  'vendor-mui-icons': ['@mui/icons-material'],
+                  'vendor-utils': ['date-fns', 'html-react-parser'],
+               },
+            },
+         },
+         // Increase the warning limit to avoid noise
+         chunkSizeWarningLimit: 1000,
+         // Generate source maps for debugging in production
+         sourcemap: mode !== 'production',
       },
-      // Other build optimizations
-    }
-  };
+      server: {
+         hmr: true,
+         port: 3000,
+         open: true,
+         // Add CORS settings if needed for API access during development
+         cors: true,
+      },
+      // Improve TypeScript integration
+      optimizeDeps: {
+         // Force includes for better optimization
+         include: [
+            'react',
+            'react-dom',
+            'react-router-dom',
+            '@mui/material',
+            '@mui/icons-material',
+            'date-fns'
+         ]
+      },
+      // Improved error handling
+      esbuild: {
+         logOverride: { 'this-is-undefined-in-esm': 'silent' }
+      }
+   };
 });
 ```
 
