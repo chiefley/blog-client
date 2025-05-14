@@ -1,189 +1,224 @@
-class SWeaselVm {
-    private _world: SWeaselWorld;
-    private _context: CanvasRenderingContext2D;
-    private _cycleTimer: number;
-    private _running: boolean;
-    private _initialized: boolean;
-    private _generations: number;
+// sweaselvm.ts - View model that connects the simulation to the UI
+import { SWeaselWorld } from './sweaselworld';
 
-    private _field: HTMLCanvasElement;
-    private _txtNumSources: HTMLInputElement;
-    private _btnReset: HTMLButtonElement;
-    private _btnRun: HTMLButtonElement;
-    private _btnStop: HTMLButtonElement;
-    private _btnEarthquake: HTMLButtonElement;
-    private _btnSingleStep: HTMLButtonElement;
-    private _lblGenerations: HTMLSpanElement;
-    private _lblSpentCalories: HTMLSpanElement;
-    private _lblAcquiredCalories: HTMLSpanElement;
-    private _lblNetCalories: HTMLSpanElement;
+export class SWeaselVm {
+  private _world: SWeaselWorld | undefined;
+  private _context: CanvasRenderingContext2D;
+  private _cycleTimer: number = 0;
+  private _running: boolean = false;
+  private _initialized: boolean = false;
+  private _generations: number = 0;
 
-    private _allBtnStops: HTMLCollectionOf<HTMLButtonElement>;
+  private _field: HTMLCanvasElement;
+  private _txtNumSources: HTMLInputElement;
+  private _btnReset: HTMLButtonElement;
+  private _btnRun: HTMLButtonElement;
+  private _btnStop: HTMLButtonElement;
+  private _btnEarthquake: HTMLButtonElement;
+  private _btnSingleStep: HTMLButtonElement;
+  private _lblGenerations: HTMLSpanElement;
+  private _lblSpentCalories: HTMLSpanElement;
+  private _lblAcquiredCalories: HTMLSpanElement;
+  private _lblNetCalories: HTMLSpanElement;
 
-    constructor(private ww: HTMLElement, private mutationLevel: number, private withBadger: boolean) {
-        this._field = <HTMLCanvasElement>ww.querySelector(".field");
-        this._txtNumSources = <HTMLInputElement>ww.querySelector(".txtNumSources");
-        this._btnReset = <HTMLButtonElement>ww.querySelector(".btnReset");
-        this._btnRun = <HTMLButtonElement>ww.querySelector(".btnRun");
-        this._btnStop = <HTMLButtonElement>ww.querySelector(".btnStop");
-        this._btnEarthquake = <HTMLButtonElement>ww.querySelector(".btnEarthquake");
-        this._lblGenerations = <HTMLSpanElement>ww.querySelector(".lblGenerations");
-        this._lblSpentCalories = <HTMLSpanElement>ww.querySelector(".lblSpentCalories");
-        this._lblAcquiredCalories = <HTMLSpanElement>ww.querySelector(".lblAcquiredCalories");
-        this._lblNetCalories = <HTMLSpanElement>ww.querySelector(".lblNetCalories");
-        this._allBtnStops = <HTMLCollectionOf<HTMLButtonElement>>document.getElementsByClassName("btnStop");
+  private _allBtnStops: HTMLCollectionOf<HTMLButtonElement>;
 
-        this._btnSingleStep = <HTMLButtonElement>ww.querySelector(".btnSingleStep");
+  constructor(private container: HTMLElement, private mutationLevel: number, private withBadger: boolean) {
+    // Get UI elements
+    this._field = container.querySelector(".field") as HTMLCanvasElement;
+    this._txtNumSources = container.querySelector(".txtNumSources") as HTMLInputElement;
+    this._btnReset = container.querySelector(".btnReset") as HTMLButtonElement;
+    this._btnRun = container.querySelector(".btnRun") as HTMLButtonElement;
+    this._btnStop = container.querySelector(".btnStop") as HTMLButtonElement;
+    this._btnEarthquake = container.querySelector(".btnEarthquake") as HTMLButtonElement;
+    this._lblGenerations = container.querySelector(".lblGenerations") as HTMLSpanElement;
+    this._lblSpentCalories = container.querySelector(".lblSpentCalories") as HTMLSpanElement;
+    this._lblAcquiredCalories = container.querySelector(".lblAcquiredCalories") as HTMLSpanElement;
+    this._lblNetCalories = container.querySelector(".lblNetCalories") as HTMLSpanElement;
+    this._allBtnStops = document.getElementsByClassName("btnStop") as HTMLCollectionOf<HTMLButtonElement>;
+    this._btnSingleStep = container.querySelector(".btnSingleStep") as HTMLButtonElement;
 
-        this._context = this._field.getContext("2d");
-        this._context.scale(this._field.clientWidth / 1000, this._field.clientHeight / 1000);
-        this._context.clearRect(0, 0, 1000, 1000);
-        this._context.font = "30px Arial";
-
-        this._btnReset.onclick = () => { this.btnResetClick(); };
-        this._btnRun.onclick = () => { this.btnRunClick(); };
-        this._btnStop.onclick = () => { this.btnStopClick(); };
-        this._btnEarthquake.onclick = () => { this.btnEarthquakeClick(); };
-        this._txtNumSources.value = "15";
-
-        this._btnSingleStep.onclick = () => { this.btnSingleStepClick(); };
-
-        this._running = false;
-        this._initialized = false;
-        this._generations = 0;
-        this.viewEnable();
+    // Initialize the canvas
+    const ctx = this._field.getContext("2d");
+    if (!ctx) {
+      throw new Error("Could not get canvas context");
     }
 
-    private init = () => {
-        if (this._txtNumSources.value === "")
-            this._txtNumSources.value = "15";
+    this._context = ctx;
+    this._context.scale(this._field.clientWidth / 1000, this._field.clientHeight / 1000);
+    this._context.clearRect(0, 0, 1000, 1000);
+    this._context.font = "30px Arial";
 
-        let numSources = Math.floor(this._txtNumSources.valueAsNumber);
-        if (numSources < 5) {
-            this._txtNumSources.value = "5";
-            numSources = 5;
-        }
+    // Set up event handlers
+    this._btnReset.onclick = () => { this.btnResetClick(); };
+    this._btnRun.onclick = () => { this.btnRunClick(); };
+    this._btnStop.onclick = () => { this.btnStopClick(); };
+    this._btnEarthquake.onclick = () => { this.btnEarthquakeClick(); };
+    this._btnSingleStep.onclick = () => { this.btnSingleStepClick(); };
 
-        if (numSources > 100) {
-            this._txtNumSources.value = "100";
-            numSources = 100;
-        }
-        this._world = new SWeaselWorld(numSources, this.mutationLevel, this.withBadger);
-        this._generations = 0;
-        this._world.init();
-        this.clearField();
-        this.DrawAll();
-    };
+    // Set initial source count
+    this._txtNumSources.value = "15";
 
-    private btnResetClick = () => {
-        this.init();
-        this._initialized = true;
-        this.viewEnable();
-    };
+    // Initialize state
+    this._running = false;
+    this._initialized = false;
+    this._generations = 0;
+    this.viewEnable();
+  }
 
-    private btnRunClick = () => {
-        for (let i = 0; i < this._allBtnStops.length; i++)
-            this._allBtnStops[i].click();
-
-        this._running = true;
-        this._cycleTimer = setInterval(this.worldCycle, 500);
-        this.viewEnable();
-    };
-
-    private btnStopClick = () => {
-        clearInterval(this._cycleTimer);
-        this._running = false;
-        this.viewEnable();
-    };
-
-    private btnSingleStepClick = () => {
-        this._running = true;
-        this.viewEnable();
-        this.worldCycle();
-        this._running = false;
-        this.viewEnable();
-    };
-
-    private btnEarthquakeClick = () => {
-        this._world.earthquake();
+  private init = (): void => {
+    if (this._txtNumSources.value === "") {
+      this._txtNumSources.value = "15";
     }
 
-    private viewEnable = () => {
-        this._txtNumSources.disabled = (this._running);
-        this._btnReset.disabled = (this._running);
-        this._btnRun.disabled = (this._running || !this._initialized);
-        this._btnStop.disabled = (!this._running || !this._initialized);
-        this._btnEarthquake.disabled = (!this._running || !this._initialized);
-    };
+    let numSources = Math.floor(this._txtNumSources.valueAsNumber);
+    if (numSources < 5) {
+      this._txtNumSources.value = "5";
+      numSources = 5;
+    }
 
-    private DrawAll = () => {
-        this.DrawSources();
-        this.DrawCorners();
-        this.DrawPaths();
-        if (this.withBadger)
-            this.DrawBadger();
-        this.DisplayValues();
-    };
+    if (numSources > 100) {
+      this._txtNumSources.value = "100";
+      numSources = 100;
+    }
 
-    private worldCycle = () => {
-        this._generations++;
-        this._world.worldCycle();
-        this.clearField();
-        this.DrawAll();
-    };
+    this._world = new SWeaselWorld(numSources, this.mutationLevel, this.withBadger);
+    this._generations = 0;
+    this._world.init();
+    this.clearField();
+    this.DrawAll();
+  };
 
-    private clearField = () => {
-        this._context.clearRect(0, 0, 1000, 1000);
-    };
+  private btnResetClick = (): void => {
+    this.init();
+    this._initialized = true;
+    this.viewEnable();
+  };
 
-    private DrawSources = () => {
-        this._context.lineWidth = 2;
-        this._context.strokeStyle = "green";
-        for (let p of this._world.foodSources) {
-            this._context.beginPath();
-            this._context.arc(p.x, p.y, 10, 0, 2 * Math.PI, false);
-            this._context.stroke();
-        }
-    };
+  private btnRunClick = (): void => {
+    // Stop any other running simulations
+    for (let i = 0; i < this._allBtnStops.length; i++) {
+      this._allBtnStops[i].click();
+    }
 
-    private DrawCorners = () => {
-        this._context.lineWidth = 2;
-        this._context.strokeStyle = "black";
-        this._context.fillStyle = "black";
-        for (let c of this._world.stops()) {
-            this._context.beginPath();
-            this._context.arc(c.x, c.y, 5, 0, 2 * Math.PI, false);
-            this._context.stroke();
-        }
-    };
+    this._running = true;
+    this._cycleTimer = window.setInterval(this.worldCycle, 500);
+    this.viewEnable();
+  };
 
-    private DrawPaths = () => {
-        this._context.lineWidth = 1;
-        this._context.strokeStyle = "black";
-        for (let l of this._world.paths()) {
-            this._context.beginPath();
-            this._context.moveTo(l.start.x, l.start.y);
-            this._context.lineTo(l.end.x, l.end.y);
-            this._context.stroke();
-        }
-    };
+  private btnStopClick = (): void => {
+    window.clearInterval(this._cycleTimer);
+    this._running = false;
+    this.viewEnable();
+  };
 
-    private DrawBadger = () => {
-        this._context.lineWidth = 2;
-        this._context.strokeStyle = "red";
-        let p = this._world.badger.position;
-        this._context.beginPath();
-        this._context.arc(p.x, p.y, 10, 0, 2 * Math.PI, false);
-        this._context.stroke();
+  private btnSingleStepClick = (): void => {
+    this._running = true;
+    this.viewEnable();
+    this.worldCycle();
+    this._running = false;
+    this.viewEnable();
+  };
 
-    };
+  private btnEarthquakeClick = (): void => {
+    if (this._world) {
+      this._world.earthquake();
+      this.clearField();
+      this.DrawAll();
+    }
+  }
 
-    private DisplayValues = () => {
-        let calsSpent = this._world.parentSpentCalories();
-        let calsAcquired = this._world.parentAcquiredCalories();
-        this._lblAcquiredCalories.innerText = calsAcquired.toString();
-        this._lblSpentCalories.innerText = calsSpent.toString();
-        this._lblNetCalories.innerText = (calsAcquired - calsSpent).toString();
-        this._lblGenerations.innerText = this._generations.toString();
-    };
+  private viewEnable = (): void => {
+    this._txtNumSources.disabled = this._running;
+    this._btnReset.disabled = this._running;
+    this._btnRun.disabled = this._running || !this._initialized;
+    this._btnStop.disabled = !this._running || !this._initialized;
+    this._btnEarthquake.disabled = !this._initialized;
+    this._btnSingleStep.disabled = this._running || !this._initialized;
+  };
+
+  private DrawAll = (): void => {
+    if (!this._world) return;
+
+    this.DrawSources();
+    this.DrawCorners();
+    this.DrawPaths();
+    if (this.withBadger) {
+      this.DrawBadger();
+    }
+    this.DisplayValues();
+  };
+
+  private worldCycle = (): void => {
+    if (!this._world) return;
+
+    this._generations++;
+    this._world.worldCycle();
+    this.clearField();
+    this.DrawAll();
+  };
+
+  private clearField = (): void => {
+    this._context.clearRect(0, 0, 1000, 1000);
+  };
+
+  private DrawSources = (): void => {
+    if (!this._world) return;
+
+    this._context.lineWidth = 2;
+    this._context.strokeStyle = "green";
+    for (let p of this._world.foodSources) {
+      this._context.beginPath();
+      this._context.arc(p.x, p.y, 10, 0, 2 * Math.PI, false);
+      this._context.stroke();
+    }
+  };
+
+  private DrawCorners = (): void => {
+    if (!this._world) return;
+
+    this._context.lineWidth = 2;
+    this._context.strokeStyle = "black";
+    this._context.fillStyle = "black";
+    for (let c of this._world.stops()) {
+      this._context.beginPath();
+      this._context.arc(c.x, c.y, 5, 0, 2 * Math.PI, false);
+      this._context.stroke();
+    }
+  };
+
+  private DrawPaths = (): void => {
+    if (!this._world) return;
+
+    this._context.lineWidth = 1;
+    this._context.strokeStyle = "black";
+    for (let l of this._world.paths()) {
+      this._context.beginPath();
+      this._context.moveTo(l.start.x, l.start.y);
+      this._context.lineTo(l.end.x, l.end.y);
+      this._context.stroke();
+    }
+  };
+
+  private DrawBadger = (): void => {
+    if (!this._world || !this.withBadger) return;
+
+    this._context.lineWidth = 2;
+    this._context.strokeStyle = "red";
+    let p = this._world.badger.position;
+    this._context.beginPath();
+    this._context.arc(p.x, p.y, 10, 0, 2 * Math.PI, false);
+    this._context.stroke();
+  };
+
+  private DisplayValues = (): void => {
+    if (!this._world) return;
+
+    let calsSpent = this._world.parentSpentCalories();
+    let calsAcquired = this._world.parentAcquiredCalories();
+    this._lblAcquiredCalories.innerText = calsAcquired.toString();
+    this._lblSpentCalories.innerText = calsSpent.toString();
+    this._lblNetCalories.innerText = (calsAcquired - calsSpent).toString();
+    this._lblGenerations.innerText = this._generations.toString();
+  };
 }

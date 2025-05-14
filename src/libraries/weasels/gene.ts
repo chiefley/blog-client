@@ -1,26 +1,29 @@
-class Gene {
-    // The index of this gene.
-    // Then index of a parent node in the tree for this gene (or -1 if none).
-    parent: Gene;
-    // The x,y location of the food stop for this gene.
-    stop: Point;
-    
-    constructor() {
-    }
+// gene.ts - Represents a gene in the genetic algorithm
+import { Point } from './point';
 
-    public Init = () => {
-        this.parent = null;
-        this.stop = new Point(0, 0);
-        this.stop.x = Math.random() * 1000;
-        this.stop.y = Math.random() * 1000;
-        this.stop.randomMove(100);
-    };
+export class Gene {
+  // Reference to the parent gene in the tree
+  public parent: Gene | null = null;
 
-    // True if this gene is a root node in the tree.
-    public isRoot = (): boolean => (this.parent === null);
+  // The x,y location of the food stop for this gene
+  public stop: Point = new Point(0, 0);
 
-    // Add a path to another gene.
-    public addToParent = (parentGene: Gene) => {
-        this.parent = parentGene;
-    };
+  constructor() {
+  }
+
+  public Init = (): void => {
+    this.parent = null;
+    this.stop = new Point(0, 0);
+    this.stop.x = Math.random() * 1000;
+    this.stop.y = Math.random() * 1000;
+    this.stop.randomMove(100);
+  };
+
+  // True if this gene is a root node in the tree.
+  public isRoot = (): boolean => (this.parent === null);
+
+  // Add a path to another gene.
+  public addToParent = (parentGene: Gene): void => {
+    this.parent = parentGene;
+  };
 }
