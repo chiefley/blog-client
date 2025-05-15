@@ -23,20 +23,20 @@ export class SWeaselVm {
 
   private _allBtnStops: HTMLCollectionOf<HTMLButtonElement>;
 
-  constructor(private container: HTMLElement, private mutationLevel: number, private withBadger: boolean) {
+  constructor(containerElem: HTMLElement, private mutationLevel: number, private withBadger: boolean) {
     // Get UI elements
-    this._field = container.querySelector(".field") as HTMLCanvasElement;
-    this._txtNumSources = container.querySelector(".txtNumSources") as HTMLInputElement;
-    this._btnReset = container.querySelector(".btnReset") as HTMLButtonElement;
-    this._btnRun = container.querySelector(".btnRun") as HTMLButtonElement;
-    this._btnStop = container.querySelector(".btnStop") as HTMLButtonElement;
-    this._btnEarthquake = container.querySelector(".btnEarthquake") as HTMLButtonElement;
-    this._lblGenerations = container.querySelector(".lblGenerations") as HTMLSpanElement;
-    this._lblSpentCalories = container.querySelector(".lblSpentCalories") as HTMLSpanElement;
-    this._lblAcquiredCalories = container.querySelector(".lblAcquiredCalories") as HTMLSpanElement;
-    this._lblNetCalories = container.querySelector(".lblNetCalories") as HTMLSpanElement;
+    this._field = containerElem.querySelector(".field") as HTMLCanvasElement;
+    this._txtNumSources = containerElem.querySelector(".txtNumSources") as HTMLInputElement;
+    this._btnReset = containerElem.querySelector(".btnReset") as HTMLButtonElement;
+    this._btnRun = containerElem.querySelector(".btnRun") as HTMLButtonElement;
+    this._btnStop = containerElem.querySelector(".btnStop") as HTMLButtonElement;
+    this._btnEarthquake = containerElem.querySelector(".btnEarthquake") as HTMLButtonElement;
+    this._lblGenerations = containerElem.querySelector(".lblGenerations") as HTMLSpanElement;
+    this._lblSpentCalories = containerElem.querySelector(".lblSpentCalories") as HTMLSpanElement;
+    this._lblAcquiredCalories = containerElem.querySelector(".lblAcquiredCalories") as HTMLSpanElement;
+    this._lblNetCalories = containerElem.querySelector(".lblNetCalories") as HTMLSpanElement;
     this._allBtnStops = document.getElementsByClassName("btnStop") as HTMLCollectionOf<HTMLButtonElement>;
-    this._btnSingleStep = container.querySelector(".btnSingleStep") as HTMLButtonElement;
+    this._btnSingleStep = containerElem.querySelector(".btnSingleStep") as HTMLButtonElement;
 
     // Initialize the canvas
     const ctx = this._field.getContext("2d");

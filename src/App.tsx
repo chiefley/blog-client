@@ -11,13 +11,15 @@ const Home = lazy(() => import('./pages/Home'));
 const CategoryPosts = lazy(() => import('./pages/CategoryPosts'));
 const TagPosts = lazy(() => import('./pages/TagPosts'));
 const PostDetail = lazy(() => import('./components/posts/PostDetail'));
+// Add the new GeneticAlgorithmPost page
+const GeneticAlgorithmPost = lazy(() => import('./pages/GeneticAlgorithmPost'));
 
 // Loading fallback component
 const PageLoader = () => (
-  <Box sx={{ 
-    display: 'flex', 
-    justifyContent: 'center', 
-    alignItems: 'center', 
+  <Box sx={{
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
     py: 8,
     minHeight: '400px'
   }}>
@@ -29,7 +31,7 @@ const App: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  
+
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
   };
@@ -40,16 +42,16 @@ const App: React.FC = () => {
         <CssBaseline />
         <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
           <Header onMenuClick={toggleSidebar} sidebarOpen={sidebarOpen} />
-          
+
           <Box component="main" sx={{ flexGrow: 1, py: 3 }}>
             <Container maxWidth="lg">
               <Grid container spacing={3}>
                 {/* Sidebar - Hidden on mobile unless opened */}
-                <Grid 
-                  item 
-                  xs={12} 
+                <Grid
+                  item
+                  xs={12}
                   md={3}
-                  sx={{ 
+                  sx={{
                     display: isMobile ? (sidebarOpen ? 'block' : 'none') : 'block',
                     position: isMobile ? 'fixed' : 'static',
                     top: isMobile ? 64 : 'auto',
@@ -76,6 +78,8 @@ const App: React.FC = () => {
                       <Route path="/posts/category/:slug" element={<CategoryPosts />} />
                       <Route path="/posts/tag/:slug" element={<TagPosts />} />
                       <Route path="/post/:slug" element={<PostDetail />} />
+                      {/* Add the new route for the genetic algorithm blog post */}
+                      <Route path="/post/genetic-algorithm-with-weasels" element={<GeneticAlgorithmPost />} />
                       {/* Add a fallback route that redirects to home */}
                       <Route path="*" element={<Home />} />
                     </Routes>
