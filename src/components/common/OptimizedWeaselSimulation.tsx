@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Box, Slider, Typography, FormControlLabel, Switch, FormControl, InputLabel, Select, MenuItem, SelectChangeEvent } from '@mui/material';
 import { WeaselSimulationOptimizer } from '../../libraries/weasels/weaselOptimizer';
 import SpeedIcon from '@mui/icons-material/Speed';
+import PetsIcon from '@mui/icons-material/Pets';
 
 interface OptimizedWeaselSimulationProps {
   mutationLevel?: number; // 1-5, defaults to 5
@@ -16,7 +17,7 @@ interface OptimizedWeaselSimulationProps {
  */
 const OptimizedWeaselSimulation: React.FC<OptimizedWeaselSimulationProps> = ({
                                                                                mutationLevel = 5,
-                                                                               withBadger = false,
+                                                                               withBadger: initialWithBadger = false,
                                                                                initialFoodSources = 15,
                                                                                height = 600,
                                                                                showControls = true
@@ -26,6 +27,10 @@ const OptimizedWeaselSimulation: React.FC<OptimizedWeaselSimulationProps> = ({
   const [speed, setSpeed] = useState<number>(1);
   const [showFps, setShowFps] = useState<boolean>(false);
   const [optimizationLevel, setOptimizationLevel] = useState<string>("medium");
+  const [withBadger, setWithBadger] = useState<boolean>(initialWithBadger);
+
+  // Track if the simulation is initialized
+  const [isInitialized, setIsInitialized] = useState<boolean>(false);
 
   // Initialize the simulation once
   useEffect(() => {
@@ -64,6 +69,7 @@ const OptimizedWeaselSimulation: React.FC<OptimizedWeaselSimulationProps> = ({
       const resetButton = containerRef.current.querySelector('.btnReset');
       if (resetButton) {
         (resetButton as HTMLButtonElement).click();
+        setIsInitialized(true);
       }
     }
 
@@ -73,7 +79,7 @@ const OptimizedWeaselSimulation: React.FC<OptimizedWeaselSimulationProps> = ({
         optimizerRef.current.dispose();
       }
     };
-  }, [mutationLevel, withBadger, initialFoodSources, height]);
+  }, [mutationLevel, initialFoodSources, height]);
 
   // Update speed when it changes
   useEffect(() => {
@@ -112,6 +118,42 @@ const OptimizedWeaselSimulation: React.FC<OptimizedWeaselSimulationProps> = ({
         break;
     }
   }, [optimizationLevel]);
+
+  // Handle badger toggle and reinitialize the simulation
+  const handleBadgerChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    // Stop any running simulation first
+    const stopButton = containerRef.current?.querySelector('.btnStop');
+    if (stopButton) {
+      (stopButton as HTMLButtonElement).click();
+    }
+
+    setWithBadger(event.target.checked);
+
+    // We need to reinitialize the optimizer with the new badger setting
+    if (containerRef.current && isInitialized) {
+      // Clean up existing optimizer
+      if (optimizerRef.current) {
+        optimizerRef.current.dispose();
+      }
+
+      // Create a new optimizer with updated badger setting
+      optimizerRef.current = new WeaselSimulationOptimizer(
+        containerRef.current,
+        mutationLevel,
+        event.target.checked,
+        {
+          speedMultiplier: speed,
+          showFps: showFps
+        }
+      );
+
+      // Reset to initialize the simulation
+      const resetButton = containerRef.current.querySelector('.btnReset');
+      if (resetButton) {
+        (resetButton as HTMLButtonElement).click();
+      }
+    }
+  };
 
   const handleSpeedChange = (_event: Event, newValue: number | number[]) => {
     setSpeed(newValue as number);
@@ -174,7 +216,21 @@ const OptimizedWeaselSimulation: React.FC<OptimizedWeaselSimulationProps> = ({
             valueLabelDisplay="auto"
           />
 
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+          <Box sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            mt: 2,
+            flexWrap: 'wrap'
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <PetsIcon sx={{ mr: 1, color: withBadger ? 'error.main' : 'text.disabled' }} />
+              <FormControlLabel
+                control={<Switch checked={withBadger} onChange={handleBadgerChange} />}
+                label="Include Badger (Predator)"
+              />
+            </Box>
+
             <FormControlLabel
               control={<Switch checked={showFps} onChange={handleFpsChange} />}
               label="Show FPS"

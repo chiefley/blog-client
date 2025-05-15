@@ -1,8 +1,16 @@
-import React from 'react';
-import { Container, Typography, Box, Divider, Paper, Alert } from '@mui/material';
+import React, { useState } from 'react';
+import { Container, Typography, Box, Divider, Paper, Alert, FormControlLabel, Switch } from '@mui/material';
 import OptimizedWeaselSimulation from '../components/common/OptimizedWeaselSimulation';
+import PetsIcon from '@mui/icons-material/Pets';
 
 const GeneticAlgorithmPost: React.FC = () => {
+  const [withBadger, setWithBadger] = useState<boolean>(false);
+
+  // Handler for the main badger toggle
+  const handleBadgerToggle = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setWithBadger(event.target.checked);
+  };
+
   return (
     <Container maxWidth="lg">
       <Paper sx={{ p: 4, my: 4, borderRadius: 2 }}>
@@ -22,6 +30,38 @@ const GeneticAlgorithmPost: React.FC = () => {
           over multiple generations.
         </Typography>
 
+        <Box sx={{
+          display: 'flex',
+          alignItems: 'center',
+          my: 3,
+          p: 2,
+          bgcolor: withBadger ? 'error.light' : 'success.light',
+          borderRadius: 2,
+          transition: 'background-color 0.3s ease'
+        }}>
+          <PetsIcon sx={{ mr: 2, color: withBadger ? 'error.dark' : 'success.dark' }} />
+          <Box sx={{ flexGrow: 1 }}>
+            <Typography variant="subtitle1" fontWeight="medium" color={withBadger ? 'error.dark' : 'success.dark'}>
+              {withBadger ? 'Predator Mode: ON' : 'Safe Environment Mode'}
+            </Typography>
+            <Typography variant="body2" color={withBadger ? 'error.dark' : 'success.dark'}>
+              {withBadger
+                ? 'The weasels must now balance food gathering with avoiding the badger predator!'
+                : 'The weasels can focus solely on efficient food gathering with no predators.'}
+            </Typography>
+          </Box>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={withBadger}
+                onChange={handleBadgerToggle}
+                color={withBadger ? 'error' : 'success'}
+              />
+            }
+            label={withBadger ? "Disable Predator" : "Enable Predator"}
+          />
+        </Box>
+
         <Alert severity="info" sx={{ my: 3 }}>
           Press the <strong>Run</strong> button to start the simulation, and watch as the weasels evolve more efficient
           paths to gather food. Use <strong>Earthquake</strong> to randomly move food sources and see how the weasels adapt!
@@ -34,7 +74,7 @@ const GeneticAlgorithmPost: React.FC = () => {
         {/* Using the optimized simulation component */}
         <OptimizedWeaselSimulation
           mutationLevel={3}
-          withBadger={true}
+          withBadger={withBadger}
           initialFoodSources={15}
           height={500}
           showControls={true}
@@ -131,6 +171,11 @@ const GeneticAlgorithmPost: React.FC = () => {
             </li>
             <li>
               <Typography variant="body1">
+                <strong>Predator Toggle</strong>: Turn the badger (predator) on/off to see how it affects the weasel's evolution
+              </Typography>
+            </li>
+            <li>
+              <Typography variant="body1">
                 <strong>Optimization Level</strong>: Choose between quality and speed
               </Typography>
             </li>
@@ -163,7 +208,7 @@ const GeneticAlgorithmPost: React.FC = () => {
             </li>
             <li>
               <Typography variant="body1">
-                <strong>Red circle</strong>: Badger (predator)
+                <strong>Red circle</strong>: Badger (predator) - {withBadger ? 'currently active' : 'currently disabled'}
               </Typography>
             </li>
           </Box>
@@ -212,8 +257,7 @@ const GeneticAlgorithmPost: React.FC = () => {
 
         <Typography variant="body1" paragraph>
           Feel free to experiment with the simulation! Try changing the number of food sources,
-          observe what happens when you trigger an earthquake, or watch how the weasel adapts
-          to avoid the predator while still gathering food efficiently.
+          observe what happens when you trigger an earthquake, or {withBadger ? 'watch how the weasel adapts to avoid the predator while still gathering food efficiently' : 'toggle on the predator to add an extra challenge'}.
         </Typography>
 
         <Typography variant="body2" color="text.secondary" sx={{ mt: 4, fontStyle: 'italic' }}>

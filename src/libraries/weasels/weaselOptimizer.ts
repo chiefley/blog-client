@@ -1,4 +1,4 @@
-// src/libraries/weasels/weaselOptimizer.ts - Performance optimizer for weasel simulation
+// src/libraries/weasels/weaselOptimizer.ts - Fixed version
 import { SWeaselVm } from './sweaselvm';
 
 export class WeaselSimulationOptimizer {
@@ -142,6 +142,10 @@ export class WeaselSimulationOptimizer {
       this.vm.clearField();
       // @ts-ignore - Accessing private method
       this.vm.DrawAll();
+
+      // FIX: Make sure the DisplayValues method is called to update calories
+      // @ts-ignore - Accessing private method
+      this.vm.DisplayValues();
 
       this.frameCount++;
     }

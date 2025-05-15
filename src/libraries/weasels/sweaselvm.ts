@@ -1,4 +1,4 @@
-// sweaselvm.ts - View model that connects the simulation to the UI
+// src/libraries/weasels/sweaselvm.ts - Fixed version
 import { SWeaselWorld } from './sweaselworld';
 
 export class SWeaselVm {
@@ -214,8 +214,15 @@ export class SWeaselVm {
   private DisplayValues = (): void => {
     if (!this._world) return;
 
+    // Use explicit methods from SWeaselWorld that provide the values
+    // FIX: Get actual values directly from the world object
     let calsSpent = this._world.parentSpentCalories();
     let calsAcquired = this._world.parentAcquiredCalories();
+
+    // Debug logging to verify that calsAcquired is not zero
+    console.log("Acquired calories:", calsAcquired);
+
+    // Update the UI
     this._lblAcquiredCalories.innerText = calsAcquired.toString();
     this._lblSpentCalories.innerText = calsSpent.toString();
     this._lblNetCalories.innerText = (calsAcquired - calsSpent).toString();
