@@ -1,54 +1,57 @@
-// line.ts - Represents a line between two points
+// src/libraries/weasels/line.ts - Optimized version
 import { Point } from './point';
 
 export class Line {
+  // Precalculate these values
+  private _dx: number;
+  private _dy: number;
+  private _cachedLength: number | null = null;
+
   constructor(public start: Point, public end: Point) {
+    // Calculate dx and dy once during construction
+    this._dx = this.end.x - this.start.x;
+    this._dy = this.end.y - this.start.y;
   }
 
-  // Return the length of this line.
+  // Return the length of this line - with caching
   public length = (): number => {
-    return this.start.rangeFrom(this.end);
+    // Use cached value if available
+    if (this._cachedLength === null) {
+      this._cachedLength = this.start.rangeFrom(this.end);
+    }
+    return this._cachedLength;
   };
 
+  // Calculate distance from point to line - optimized implementation
   public pointRangeFromLine = (point: Point): number => {
-    let x = point.x;
-    let y = point.y;
-
-    let x1 = this.start.x;
-    let y1 = this.start.y;
-
-    let x2 = this.end.x;  // Fixed: was using start.x instead of end.x
-    let y2 = this.end.y;  // Fixed: was using start.y instead of end.y
-
-    var A = x - x1;
-    var B = y - y1;
-    var C = x2 - x1;
-    var D = y2 - y1;
-
-    var dot = A * C + B * D;
-    var len_sq = C * C + D * D;
-    var param = -1;
-    if (len_sq != 0) //in case of 0 length line
-      param = dot / len_sq;
-
-    var xx: number;
-    var yy: number;
-
-    if (param < 0) {
-      xx = x1;
-      yy = y1;
-    }
-    else if (param > 1) {
-      xx = x2;
-      yy = y2;
-    }
-    else {
-      xx = x1 + param * C;
-      yy = y1 + param * D;
+    // Early exit for zero-length line
+    if (this._dx === 0 && this._dy === 0) {
+      return this.start.rangeFrom(point);
     }
 
-    var dx = x - xx;
-    var dy = y - yy;
-    return Math.floor(Math.sqrt(dx * dx + dy * dy));
+    const x = point.x;
+    const y = point.y;
+    const x1 = this.start.x;
+    const y1 = this.start.y;
+    const x2 = this.end.x;
+    const y2 = this.end.y;
+
+    // Calculate squared length of the line segment
+    const lengthSq = this._dx * this._dx + this._dy * this._dy;
+
+    // Calculate projection coefficient
+    const t = Math.max(0, Math.min(1,
+      ((x - x1) * this._dx + (y - y1) * this._dy) / lengthSq
+    ));
+
+    // Calculate closest point on the line segment
+    const closestX = x1 + t * this._dx;
+    const closestY = y1 + t * this._dy;
+
+    // Calculate distance using the same approximation as Point.rangeFrom
+    const xdiff = Math.abs(x - closestX);
+    const ydiff = Math.abs(y - closestY);
+
+    return Math.floor(Math.max(xdiff, ydiff) + (Math.min(xdiff, ydiff) / 2));
   };
 }

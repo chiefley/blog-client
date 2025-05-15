@@ -1,6 +1,6 @@
 import React from 'react';
 import { Container, Typography, Box, Divider, Paper, Alert } from '@mui/material';
-import WeaselSimulation from '../components/common/WeaselSimulation';
+import OptimizedWeaselSimulation from '../components/common/OptimizedWeaselSimulation';
 
 const GeneticAlgorithmPost: React.FC = () => {
   return (
@@ -31,12 +31,13 @@ const GeneticAlgorithmPost: React.FC = () => {
           Interactive Demonstration
         </Typography>
 
-        {/* The Weasel Simulation Component */}
-        <WeaselSimulation
+        {/* Using the optimized simulation component */}
+        <OptimizedWeaselSimulation
           mutationLevel={3}
           withBadger={true}
           initialFoodSources={15}
           height={500}
+          showControls={true}
         />
 
         <Box sx={{ mt: 4 }}>
@@ -126,6 +127,16 @@ const GeneticAlgorithmPost: React.FC = () => {
             <li>
               <Typography variant="body1">
                 <strong>Earthquake</strong>: Randomly move food sources to test adaptation
+              </Typography>
+            </li>
+            <li>
+              <Typography variant="body1">
+                <strong>Optimization Level</strong>: Choose between quality and speed
+              </Typography>
+            </li>
+            <li>
+              <Typography variant="body1">
+                <strong>Simulation Speed</strong>: Adjust how fast the simulation runs
               </Typography>
             </li>
           </Box>

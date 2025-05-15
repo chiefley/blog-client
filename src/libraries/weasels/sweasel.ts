@@ -1,4 +1,4 @@
-// sweasel.ts - Represents a weasel in the genetic algorithm
+// src/libraries/weasels/sweasel.ts - Optimized version
 import { Dna } from './dna';
 import { Gene } from './gene';
 import { Point } from './point';
@@ -8,6 +8,9 @@ export class SWeasel {
   private _dna: Dna | undefined;
   private _mutationType: number = 0;
   public weaselIx: number = 0;
+  private _stopsCache: Point[] | null = null;
+  private _pathsCache: Line[] | null = null;
+  private _modified: boolean = true;
 
   constructor(private _mutationLevel: number) {
   }
@@ -15,20 +18,40 @@ export class SWeasel {
   public init = (stops: number): void => {
     this._dna = new Dna();
     this._dna.init(stops);
+    this._modified = true;
+    this._stopsCache = null;
+    this._pathsCache = null;
   };
 
   public stops = (): Point[] => {
     if (!this._dna) {
       return [];
     }
-    return this._dna.stops();
+
+    // Use cache if available and not modified
+    if (!this._modified && this._stopsCache) {
+      return this._stopsCache;
+    }
+
+    // Update cache
+    this._stopsCache = this._dna.stops();
+    return this._stopsCache;
   };
 
   public paths = (): Line[] => {
     if (!this._dna) {
       return [];
     }
-    return this._dna.paths();
+
+    // Use cache if available and not modified
+    if (!this._modified && this._pathsCache) {
+      return this._pathsCache;
+    }
+
+    // Update cache and reset modified flag
+    this._pathsCache = this._dna.paths();
+    this._modified = false;
+    return this._pathsCache;
   };
 
   public isAlive = (): boolean => {
@@ -44,6 +67,11 @@ export class SWeasel {
       this._dna = new Dna();
     }
     this._dna.copyIn(inWeasel._dna);
+
+    // Invalidate caches
+    this._modified = true;
+    this._stopsCache = null;
+    this._pathsCache = null;
   };
 
   public mutate = (): void => {
@@ -51,7 +79,8 @@ export class SWeasel {
       return;
     }
 
-    let nrMutations = Math.floor(Math.random() * 3) + 1; // At least 1 mutation
+    // Generate a random number of mutations between 1 and 3
+    const nrMutations = Math.floor(Math.random() * 3) + 1;
 
     for (let i = 0; i < nrMutations; i++) {
       this._mutationType = Math.floor(Math.random() * this._mutationLevel);
@@ -73,6 +102,9 @@ export class SWeasel {
           break;
       }
     }
+
+    // Mark as modified after mutations
+    this._modified = true;
   };
 
   private randomMovePath = (): void => {
@@ -110,6 +142,7 @@ export class SWeasel {
       } while (newParent === geneToMove);
 
       this._dna.moveGeneToNewParent(geneToMove, newParent);
+      this._modified = true;
     } catch (e) {
       console.error("Error in randomMovePath:", e);
     }
@@ -123,6 +156,7 @@ export class SWeasel {
     try {
       let geneToMove = this._dna.randomGene();
       geneToMove.stop.randomMove(50);
+      this._modified = true;
     } catch (e) {
       console.error("Error in randomMoveStop:", e);
     }
@@ -137,6 +171,7 @@ export class SWeasel {
       let parentGene = this._dna.randomGene();
       let newGene = this._dna.addNewGene();
       newGene.addToParent(parentGene);
+      this._modified = true;
     } catch (e) {
       console.error("Error in randomAddStop:", e);
     }
@@ -164,6 +199,7 @@ export class SWeasel {
       } while (aGene.isRoot());
 
       this._dna.deleteGene(aGene);
+      this._modified = true;
     } catch (e) {
       console.error("Error in randomDeleteStop:", e);
     }
@@ -194,6 +230,7 @@ export class SWeasel {
         // Insert the new gene between the parent and the current gene
         aGene.parent = newGene;
         newGene.parent = parentGene;
+        this._modified = true;
       }
     } catch (e) {
       console.error("Error in randomInsertStop:", e);

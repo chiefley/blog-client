@@ -1,4 +1,4 @@
-// dna.ts - Represents a collection of genes that form a DNA
+// src/libraries/weasels/dna.ts - Optimized version
 import { Gene } from './gene';
 import { Point } from './point';
 import { Line } from './line';
@@ -6,15 +6,28 @@ import { Line } from './line';
 export class Dna {
   public genes: Gene[] = []; // Initialize to empty array
 
+  // Cache for frequently used operations
+  private _stopsCache: Point[] | null = null;
+  private _pathsCache: Line[] | null = null;
+  private _modified: boolean = true;
+
   constructor() {
     // Constructor is now empty as we initialized genes above
   }
 
   init = (nrGenes: number): void => {
     this.genes = [];
+    // Clear caches
+    this._stopsCache = null;
+    this._pathsCache = null;
+    this._modified = true;
+
+    // Preallocate array for better performance
+    this.genes = new Array(nrGenes);
+
     for (let i = 0; i < nrGenes; i++) {
       let g = new Gene();
-      this.genes.push(g);
+      this.genes[i] = g;
       g.Init();
     }
 
@@ -31,6 +44,8 @@ export class Dna {
     let newGene = new Gene();
     newGene.Init();
     this.genes.push(newGene);
+    // Invalidate caches
+    this._modified = true;
     return newGene;
   };
 
@@ -41,6 +56,8 @@ export class Dna {
       if (index >= 0) {
         this.genes.splice(index, 1);
       }
+      // Invalidate caches
+      this._modified = true;
     }
   }
 
@@ -49,10 +66,13 @@ export class Dna {
     for (let c of children) {
       c.addToParent(newGene);
     }
+    // Invalidate caches
+    this._modified = true;
   }
 
   private getGeneChildPaths = (parentGene: Gene): Gene[] => {
     let children: Gene[] = [];
+    // Loop through genes only once and collect all children
     for (let g of this.genes) {
       if (g.parent === parentGene) {
         children.push(g);
@@ -75,6 +95,8 @@ export class Dna {
     } else {
       geneToMove.addToParent(newparent);
     }
+    // Invalidate caches
+    this._modified = true;
   };
 
   public isLeaf = (aGene: Gene): boolean => {
@@ -98,30 +120,54 @@ export class Dna {
 
   // Return an array of food stops.
   public stops = (): Point[] => {
+    // Use cache if available and not modified
+    if (!this._modified && this._stopsCache) {
+      return this._stopsCache;
+    }
+
     let corners: Point[] = [];
     for (let g of this.genes) {
       corners.push(g.stop);
     }
+
+    // Update cache
+    this._stopsCache = corners;
     return corners;
   };
 
   // Return an array of paths.
   public paths = (): Line[] => {
+    // Use cache if available and not modified
+    if (!this._modified && this._pathsCache) {
+      return this._pathsCache;
+    }
+
     let paths: Line[] = [];
     for (let g of this.genes) {
       if (!g.isRoot() && g.parent) {
         paths.push(new Line(g.parent.stop, g.stop));
       }
     }
+
+    // Update cache and reset modified flag
+    this._pathsCache = paths;
+    this._modified = false;
     return paths;
   };
 
   // Copy the contents of a DNA into this one.
   public copyIn = (inDna: Dna): void => {
-    this.genes = [];
-    for (let g of inDna.genes) {
+    const inGenes = inDna.genes;
+    const geneCount = inGenes.length;
+
+    // Preallocate genes array for better performance
+    this.genes = new Array(geneCount);
+
+    // Create all genes and copy positions first
+    for (let i = 0; i < geneCount; i++) {
       let ng = new Gene();
-      this.genes.push(ng);
+      this.genes[i] = ng;
+      const g = inGenes[i];
       ng.stop = new Point(g.stop.x, g.stop.y);
     }
 
@@ -129,14 +175,19 @@ export class Dna {
     this.genes[0].parent = null;
 
     // Set parent references for all other genes
-    for (let i = 1; i < this.genes.length; i++) {
-      if (inDna.genes[i].parent) {
-        const parentIdx = inDna.genes.indexOf(inDna.genes[i].parent!);
+    for (let i = 1; i < geneCount; i++) {
+      if (inGenes[i].parent) {
+        const parentIdx = inGenes.indexOf(inGenes[i].parent!);
         if (parentIdx >= 0) {
           this.genes[i].parent = this.genes[parentIdx];
         }
       }
     }
+
+    // Invalidate caches
+    this._stopsCache = null;
+    this._pathsCache = null;
+    this._modified = true;
   };
 
   // Return a random gene from this DNA.
@@ -144,12 +195,12 @@ export class Dna {
     if (this.genes.length === 0) {
       throw new Error("Cannot select a random gene from empty DNA");
     }
-    let ix = Math.floor(Math.random() * this.genes.length);
+    const ix = Math.floor(Math.random() * this.genes.length);
     return this.genes[ix];
   };
 
   public isValidTree = (): boolean => {
-    let gs = this.genes;
+    const gs = this.genes;
     if (gs.length < 2) {
       return false;
     }
@@ -171,36 +222,25 @@ export class Dna {
       }
     }
 
-    // Check for cycles in the graph
-    for (let g of this.genes) {
+    // Check for cycles using an iterative approach (faster than recursive)
+    for (let g of gs) {
       if (g.isRoot()) {
         continue;
       }
 
-      let path: Gene[] = [];
-      if (this.hasCycle(g, path)) {
-        return false;
+      const visited = new Set<Gene>();
+      let current = g;
+
+      while (current.parent) {
+        if (visited.has(current)) {
+          return false; // Cycle detected
+        }
+        visited.add(current);
+        current = current.parent;
       }
     }
+
     return true;
-  }
-
-  private hasCycle = (gene: Gene, path: Gene[]): boolean => {
-    if (gene.isRoot()) {
-      return false;
-    }
-
-    if (path.includes(gene)) {
-      return true; // Cycle detected
-    }
-
-    path.push(gene);
-
-    if (!gene.parent) {
-      return false;
-    }
-
-    return this.hasCycle(gene.parent, path);
   }
 
   public reportDna = (msg: string): void => {
