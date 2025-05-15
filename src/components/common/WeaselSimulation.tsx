@@ -19,7 +19,7 @@ interface WeaselSimulationProps {
  */
 const WeaselSimulation: React.FC<WeaselSimulationProps> = ({
                                                              mutationLevel = 5,
-                                                             withBadger = true,
+                                                             withBadger = false,
                                                              initialFoodSources = 15,
                                                              height = 600
                                                            }) => {

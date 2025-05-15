@@ -20,7 +20,7 @@ export { SWeaselVm } from './sweaselvm';
 export function initWeaselSimulation(
   container: HTMLElement,
   mutationLevel: number = 5,
-  withBadger: boolean = true
+  withBadger: boolean = false
 ): SWeaselVm {
   // Create and return the view model
   const vm = new SWeaselVm(container, mutationLevel, withBadger);
