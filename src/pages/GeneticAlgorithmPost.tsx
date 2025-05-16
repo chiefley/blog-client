@@ -73,7 +73,7 @@ const GeneticAlgorithmPost: React.FC = () => {
 
         {/* Using the optimized simulation component */}
         <OptimizedWeaselSimulation
-          mutationLevel={3}
+          mutationLevel={5}
           withBadger={withBadger}
           initialFoodSources={15}
           height={500}
