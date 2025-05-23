@@ -1,62 +1,272 @@
-{
-  "name": "blog-client",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "node deploy.js build",
-    "clean": "node deploy.js pre-build",
-    "deploy": "node deploy.js deploy",
-    "deploy:wa1x": "node deploy.js deploy wa1x.thechief.com",
-    "deploy:applefinch": "node deploy.js deploy applefinch.thechief.com",
-    "deploy:all": "node deploy.js deploy all",
-    "full": "node deploy.js full",
-    "full:wa1x": "node deploy.js full wa1x.thechief.com",
-    "full:applefinch": "node deploy.js full applefinch.thechief.com",
-    "lint": "eslint .",
-    "preview": "vite preview",
-    "test": "vitest"
-  },
-  "dependencies": {
-    "@emotion/react": "^11.14.0",
-    "@emotion/styled": "^11.14.0",
-    "@mui/icons-material": "^6.4.7",
-    "@mui/material": "^6.4.7",
-    "basic-ftp": "^5.0.5",
-    "date-fns": "^4.1.0",
-    "dotenv": "^16.5.0",
-    "html-react-parser": "^5.2.2",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "react-router-dom": "^7.3.0"
-  },
-  "devDependencies": {
-    "@eslint/js": "^9.21.0",
-    "@testing-library/jest-dom": "^6.6.3",
-    "@testing-library/react": "^16.2.0",
-    "@types/node": "^22.13.13",
-    "@types/react": "^19.0.10",
-    "@types/react-dom": "^19.0.4",
-    "@typescript-eslint/eslint-plugin": "^8.28.0",
-    "@typescript-eslint/parser": "^8.28.0",
-    "@vitejs/plugin-react": "^4.3.4",
-    "eslint": "^9.23.0",
-    "eslint-config-prettier": "^10.1.1",
-    "eslint-plugin-react": "^7.37.4",
-    "eslint-plugin-react-dom": "^1.49.0",
-    "eslint-plugin-react-hooks": "^5.2.0",
-    "eslint-plugin-react-refresh": "^0.4.19",
-    "eslint-plugin-react-x": "^1.49.0",
-    "globals": "^15.15.0",
-    "jsdom": "^26.0.0",
-    "msw": "^2.7.3",
-    "prettier": "^3.5.3",
-    "rollup-plugin-visualizer": "^5.14.0",
-    "typescript": "~5.7.2",
-    "typescript-eslint": "^8.24.1",
-    "vite": "^6.2.0",
-    "vite-plugin-compression": "^0.5.1",
-    "vitest": "^3.0.9"
-  }
+import React, { useEffect, useRef, useState } from 'react';
+import { Box, Slider, Typography, FormControlLabel, Switch } from '@mui/material';
+import { WeaselSimulationOptimizer } from '../../libraries/weasels/weaselOptimizer';
+import SpeedIcon from '@mui/icons-material/Speed';
+import PetsIcon from '@mui/icons-material/Pets';
+
+interface OptimizedWeaselSimulationProps {
+  mutationLevel?: number; // 1-5, defaults to 5
+  withBadger?: boolean;   // Whether to include badger, defaults to true
+  initialFoodSources?: number; // Initial number of food sources, defaults to 15
+  height?: number; // Height of the canvas in pixels, defaults to 600
+  showControls?: boolean; // Whether to show optimization controls
 }
+
+/**
+ * An optimized component that displays the weasel genetic algorithm simulation.
+ */
+const OptimizedWeaselSimulation: React.FC<OptimizedWeaselSimulationProps> = ({
+                                                                               mutationLevel = 5,
+                                                                               withBadger: initialWithBadger = false,
+                                                                               initialFoodSources = 15,
+                                                                               height = 600,
+                                                                               showControls = true
+                                                                             }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const optimizerRef = useRef<WeaselSimulationOptimizer | null>(null);
+  const [speed, setSpeed] = useState<number>(1.5); // Default to 1.5x speed
+  const [showFps, setShowFps] = useState<boolean>(true); // Default FPS on
+  const [withBadger, setWithBadger] = useState<boolean>(initialWithBadger);
+
+  // Track if the simulation is initialized
+  const [isInitialized, setIsInitialized] = useState<boolean>(false);
+
+  // Initialize the simulation once
+  useEffect(() => {
+    if (containerRef.current) {
+      // Create the necessary HTML structure first
+      containerRef.current.innerHTML = `
+        <div class="stats">
+          <div>Generations: <span class="lblGenerations">0</span></div>
+          <div>Calories Spent: <span class="lblSpentCalories">0</span></div>
+          <div>Calories Acquired: <span class="lblAcquiredCalories">0</span></div>
+          <div>Net Calories: <span class="lblNetCalories">0</span></div>
+        </div>
+        <canvas class="field" width="1000" height="${height}"></canvas>
+        <div class="controls">
+          <label>Food Sources: <input type="number" class="txtNumSources" value="${initialFoodSources}" min="5" max="100" /></label>
+          <button class="btnReset">Reset</button>
+          <button class="btnRun">Run</button>
+          <button class="btnStop">Stop</button>
+          <button class="btnSingleStep">Step</button>
+          <button class="btnEarthquake">Earthquake</button>
+        </div>
+      `;
+
+      // Initialize the simulation with our optimizer
+      optimizerRef.current = new WeaselSimulationOptimizer(
+        containerRef.current,
+        mutationLevel,
+        withBadger,
+        {
+          speedMultiplier: speed,
+          showFps: showFps
+        }
+      );
+
+      // Click the reset button to initialize the simulation
+      const resetButton = containerRef.current.querySelector('.btnReset');
+      if (resetButton) {
+        (resetButton as HTMLButtonElement).click();
+        setIsInitialized(true);
+      }
+    }
+
+    // Clean up resources when component unmounts
+    return () => {
+      if (optimizerRef.current) {
+        optimizerRef.current.dispose();
+      }
+    };
+  }, [mutationLevel, initialFoodSources, height]);
+
+  // Update speed when it changes
+  useEffect(() => {
+    if (optimizerRef.current) {
+      optimizerRef.current.setSpeedMultiplier(speed);
+    }
+  }, [speed]);
+
+  // Update FPS display when it changes
+  useEffect(() => {
+    if (optimizerRef.current) {
+      optimizerRef.current.setShowFps(showFps);
+    }
+  }, [showFps]);
+
+  // Handle badger toggle and reinitialize the simulation
+  const handleBadgerChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    // Stop any running simulation first
+    const stopButton = containerRef.current?.querySelector('.btnStop');
+    if (stopButton) {
+      (stopButton as HTMLButtonElement).click();
+    }
+
+    setWithBadger(event.target.checked);
+
+    // We need to reinitialize the optimizer with the new badger setting
+    if (containerRef.current && isInitialized) {
+      // Clean up existing optimizer
+      if (optimizerRef.current) {
+        optimizerRef.current.dispose();
+      }
+
+      // Create a new optimizer with updated badger setting
+      optimizerRef.current = new WeaselSimulationOptimizer(
+        containerRef.current,
+        mutationLevel,
+        event.target.checked,
+        {
+          speedMultiplier: speed,
+          showFps: showFps
+        }
+      );
+
+      // Reset to initialize the simulation
+      const resetButton = containerRef.current.querySelector('.btnReset');
+      if (resetButton) {
+        (resetButton as HTMLButtonElement).click();
+      }
+    }
+  };
+
+  const handleSpeedChange = (_event: Event, newValue: number | number[]) => {
+    setSpeed(newValue as number);
+  };
+
+  const handleFpsChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setShowFps(event.target.checked);
+  };
+
+  return (
+    <Box sx={{ width: '100%', maxWidth: '1000px', margin: '0 auto' }}>
+      {showControls && (
+        <Box sx={{
+          mb: 2,
+          p: 2,
+          border: '1px solid',
+          borderColor: 'divider',
+          borderRadius: 1,
+          bgcolor: 'background.paper'
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+            <SpeedIcon sx={{ mr: 1, color: 'primary.main' }} />
+            <Typography variant="subtitle1" fontWeight="medium">
+              Performance Settings
+            </Typography>
+          </Box>
+
+          <Typography id="speed-slider" gutterBottom>
+            Simulation Speed: {speed}x
+          </Typography>
+          <Slider
+            value={speed}
+            onChange={handleSpeedChange}
+            aria-labelledby="speed-slider"
+            step={0.5}
+            marks
+            min={0.5}
+            max={5}
+            valueLabelDisplay="auto"
+            sx={{ mb: 3 }}
+          />
+
+          <Box sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 2
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <PetsIcon sx={{ mr: 1, color: withBadger ? 'error.main' : 'text.disabled' }} />
+              <FormControlLabel
+                control={<Switch checked={withBadger} onChange={handleBadgerChange} />}
+                label="Include Badger (Predator)"
+              />
+            </Box>
+
+            <FormControlLabel
+              control={<Switch checked={showFps} onChange={handleFpsChange} />}
+              label="Show FPS Counter"
+            />
+          </Box>
+        </Box>
+      )}
+
+      <Box
+        ref={containerRef}
+        sx={{
+          width: '100%',
+          padding: 2,
+          position: 'relative',
+          border: '1px solid',
+          borderColor: 'divider',
+          borderRadius: 2,
+          bgcolor: 'background.paper',
+          '& .stats': {
+            display: 'flex',
+            flexWrap: 'wrap',
+            justifyContent: 'space-between',
+            gap: 2,
+            maxWidth: 600,
+            mb: 2, // Add margin bottom to separate from canvas
+            '& > div': {
+              px: 1,
+              py: 0.5,
+              bgcolor: 'background.default',
+              borderRadius: 1,
+              border: '1px solid',
+              borderColor: 'divider',
+              '& span': {
+                fontWeight: 'bold',
+                color: 'primary.main'
+              }
+            }
+          },
+          '& canvas.field': {
+            width: '100%',
+            height: 'auto',
+            border: '1px solid',
+            borderColor: 'divider',
+            borderRadius: 1,
+            bgcolor: 'background.default'
+          },
+          '& .controls': {
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 1,
+            mt: 2, // Add margin top to separate from canvas
+            '& button': {
+              px: 2,
+              py: 1,
+              borderRadius: 1,
+              bgcolor: 'primary.main',
+              color: 'white',
+              border: 'none',
+              cursor: 'pointer',
+              mx: 0.5,
+              '&:hover': {
+                bgcolor: 'primary.dark'
+              },
+              '&:disabled': {
+                bgcolor: 'grey.400',
+                cursor: 'not-allowed'
+              }
+            },
+            '& input': {
+              p: 1,
+              borderRadius: 1,
+              border: '1px solid',
+              borderColor: 'divider',
+              mx: 1,
+              width: 60
+            }
+          }
+        }}
+      />
+    </Box>
+  );
+};
+
+export default OptimizedWeaselSimulation;
