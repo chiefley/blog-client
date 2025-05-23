@@ -1,4 +1,4 @@
-// src/libraries/weasels/sweaselvm.ts - Fixed version
+// src/libraries/weasels/sweaselvm.ts - Fixed canvas scaling version
 import { SWeaselWorld } from './sweaselworld';
 
 export class SWeaselVm {
@@ -8,6 +8,8 @@ export class SWeaselVm {
   private _running: boolean = false;
   private _initialized: boolean = false;
   private _generations: number = 0;
+  private _scaleX: number = 1;
+  private _scaleY: number = 1;
 
   private _field: HTMLCanvasElement;
   private _txtNumSources: HTMLInputElement;
@@ -45,9 +47,9 @@ export class SWeaselVm {
     }
 
     this._context = ctx;
-    this._context.scale(this._field.clientWidth / 1000, this._field.clientHeight / 1000);
-    this._context.clearRect(0, 0, 1000, 1000);
-    this._context.font = "30px Arial";
+    
+    // Fix canvas scaling to use the full display area
+    this.setupCanvas();
 
     // Set up event handlers
     this._btnReset.onclick = () => { this.btnResetClick(); };
@@ -66,9 +68,32 @@ export class SWeaselVm {
     this.viewEnable();
   }
 
+  private setupCanvas = (): void => {
+    // Get the actual displayed size of the canvas
+    const displayWidth = this._field.clientWidth;
+    const displayHeight = this._field.clientHeight;
+    
+    // Get the internal canvas size
+    const canvasWidth = this._field.width;
+    const canvasHeight = this._field.height;
+    
+    // Calculate scale factors to map from our 1000x1000 coordinate space
+    // to the full canvas dimensions
+    this._scaleX = canvasWidth / 1000;
+    this._scaleY = canvasHeight / 1000;
+    
+    // Apply the scaling transformation
+    this._context.setTransform(this._scaleX, 0, 0, this._scaleY, 0, 0);
+    
+    // Set default styling
+    this._context.font = "30px Arial";
+    
+    console.log(`Canvas setup: display(${displayWidth}x${displayHeight}) canvas(${canvasWidth}x${canvasHeight}) scale(${this._scaleX.toFixed(2)}x${this._scaleY.toFixed(2)})`);
+  };
+
   private init = (): void => {
     if (this._txtNumSources.value === "") {
-      this._txtNumSources.value = "15";
+      this._txtNumSources.value = "25";
     }
 
     let numSources = Math.floor(this._txtNumSources.valueAsNumber);
@@ -90,6 +115,8 @@ export class SWeaselVm {
   };
 
   private btnResetClick = (): void => {
+    // Ensure canvas is properly set up on reset
+    this.setupCanvas();
     this.init();
     this._initialized = true;
     this.viewEnable();
@@ -159,6 +186,7 @@ export class SWeaselVm {
   };
 
   private clearField = (): void => {
+    // Clear the entire canvas using the full coordinate space
     this._context.clearRect(0, 0, 1000, 1000);
   };
 
@@ -167,6 +195,7 @@ export class SWeaselVm {
 
     this._context.lineWidth = 2;
     this._context.strokeStyle = "green";
+    this._context.fillStyle = "green";
     for (let p of this._world.foodSources) {
       this._context.beginPath();
       this._context.arc(p.x, p.y, 10, 0, 2 * Math.PI, false);
@@ -183,7 +212,7 @@ export class SWeaselVm {
     for (let c of this._world.stops()) {
       this._context.beginPath();
       this._context.arc(c.x, c.y, 5, 0, 2 * Math.PI, false);
-      this._context.stroke();
+      this._context.fill(); // Use fill for solid dots
     }
   };
 
@@ -203,24 +232,26 @@ export class SWeaselVm {
   private DrawBadger = (): void => {
     if (!this._world || !this.withBadger) return;
 
-    this._context.lineWidth = 2;
+    this._context.lineWidth = 3;
     this._context.strokeStyle = "red";
+    this._context.fillStyle = "red";
     let p = this._world.badger.position;
     this._context.beginPath();
-    this._context.arc(p.x, p.y, 10, 0, 2 * Math.PI, false);
+    this._context.arc(p.x, p.y, 12, 0, 2 * Math.PI, false);
     this._context.stroke();
+    
+    // Add a smaller filled circle inside for visibility
+    this._context.beginPath();
+    this._context.arc(p.x, p.y, 6, 0, 2 * Math.PI, false);
+    this._context.fill();
   };
 
   private DisplayValues = (): void => {
     if (!this._world) return;
 
     // Use explicit methods from SWeaselWorld that provide the values
-    // FIX: Get actual values directly from the world object
     let calsSpent = this._world.parentSpentCalories();
     let calsAcquired = this._world.parentAcquiredCalories();
-
-    // Debug logging to verify that calsAcquired is not zero
-    console.log("Acquired calories:", calsAcquired);
 
     // Update the UI
     this._lblAcquiredCalories.innerText = calsAcquired.toString();
@@ -228,4 +259,22 @@ export class SWeaselVm {
     this._lblNetCalories.innerText = (calsAcquired - calsSpent).toString();
     this._lblGenerations.innerText = this._generations.toString();
   };
+
+  // Public method to access world cycle (for the optimizer)
+  public get world(): SWeaselWorld | undefined {
+    return this._world;
+  }
+
+  // Public methods for the optimizer to call
+  public clearField(): void {
+    this.clearField();
+  }
+
+  public DrawAll(): void {
+    this.DrawAll();
+  }
+
+  public DisplayValues(): void {
+    this.DisplayValues();
+  }
 }

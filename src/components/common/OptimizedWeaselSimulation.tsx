@@ -18,7 +18,7 @@ interface OptimizedWeaselSimulationProps {
 const OptimizedWeaselSimulation: React.FC<OptimizedWeaselSimulationProps> = ({
                                                                                mutationLevel = 5,
                                                                                withBadger: initialWithBadger = false,
-                                                                               initialFoodSources = 15,
+                                                                               initialFoodSources = 25,
                                                                                height = 600,
                                                                                showControls = true
                                                                              }) => {
