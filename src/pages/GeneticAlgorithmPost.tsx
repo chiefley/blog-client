@@ -75,7 +75,7 @@ const GeneticAlgorithmPost: React.FC = () => {
         <OptimizedWeaselSimulation
           mutationLevel={5}
           withBadger={withBadger}
-          initialFoodSources={15}
+          initialFoodSources={25}
           height={500}
           showControls={true}
         />

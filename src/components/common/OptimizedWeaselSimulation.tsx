@@ -7,7 +7,7 @@ import PetsIcon from '@mui/icons-material/Pets';
 interface OptimizedWeaselSimulationProps {
   mutationLevel?: number; // 1-5, defaults to 5
   withBadger?: boolean;   // Whether to include badger, defaults to true
-  initialFoodSources?: number; // Initial number of food sources, defaults to 15
+  initialFoodSources?: number; // Initial number of food sources, defaults to 25
   height?: number; // Height of the canvas in pixels, defaults to 600
   showControls?: boolean; // Whether to show optimization controls
 }

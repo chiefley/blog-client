@@ -4,12 +4,12 @@ import { SWeaselWorld } from './sweaselworld';
 export class SWeaselVm {
   private _world: SWeaselWorld | undefined;
   private _context: CanvasRenderingContext2D;
-  private _cycleTimer: number = 0;
-  private _running: boolean = false;
-  private _initialized: boolean = false;
-  private _generations: number = 0;
-  private _scaleX: number = 1;
-  private _scaleY: number = 1;
+  private _cycleTimer = 0;
+  private _running = false;
+  private _initialized = false;
+  private _generations = 0;
+  private _scaleX = 1;
+  private _scaleY = 1;
 
   private _field: HTMLCanvasElement;
   private _txtNumSources: HTMLInputElement;
@@ -27,18 +27,18 @@ export class SWeaselVm {
 
   constructor(containerElem: HTMLElement, private mutationLevel: number, private withBadger: boolean) {
     // Get UI elements
-    this._field = containerElem.querySelector(".field") as HTMLCanvasElement;
-    this._txtNumSources = containerElem.querySelector(".txtNumSources") as HTMLInputElement;
-    this._btnReset = containerElem.querySelector(".btnReset") as HTMLButtonElement;
-    this._btnRun = containerElem.querySelector(".btnRun") as HTMLButtonElement;
-    this._btnStop = containerElem.querySelector(".btnStop") as HTMLButtonElement;
-    this._btnEarthquake = containerElem.querySelector(".btnEarthquake") as HTMLButtonElement;
-    this._lblGenerations = containerElem.querySelector(".lblGenerations") as HTMLSpanElement;
-    this._lblSpentCalories = containerElem.querySelector(".lblSpentCalories") as HTMLSpanElement;
-    this._lblAcquiredCalories = containerElem.querySelector(".lblAcquiredCalories") as HTMLSpanElement;
-    this._lblNetCalories = containerElem.querySelector(".lblNetCalories") as HTMLSpanElement;
+    this._field = containerElem.querySelector(".field")!;
+    this._txtNumSources = containerElem.querySelector(".txtNumSources")!;
+    this._btnReset = containerElem.querySelector(".btnReset")!;
+    this._btnRun = containerElem.querySelector(".btnRun")!;
+    this._btnStop = containerElem.querySelector(".btnStop")!;
+    this._btnEarthquake = containerElem.querySelector(".btnEarthquake")!;
+    this._lblGenerations = containerElem.querySelector(".lblGenerations")!;
+    this._lblSpentCalories = containerElem.querySelector(".lblSpentCalories")!;
+    this._lblAcquiredCalories = containerElem.querySelector(".lblAcquiredCalories")!;
+    this._lblNetCalories = containerElem.querySelector(".lblNetCalories")!;
     this._allBtnStops = document.getElementsByClassName("btnStop") as HTMLCollectionOf<HTMLButtonElement>;
-    this._btnSingleStep = containerElem.querySelector(".btnSingleStep") as HTMLButtonElement;
+    this._btnSingleStep = containerElem.querySelector(".btnSingleStep")!;
 
     // Initialize the canvas
     const ctx = this._field.getContext("2d");
@@ -59,7 +59,7 @@ export class SWeaselVm {
     this._btnSingleStep.onclick = () => { this.btnSingleStepClick(); };
 
     // Set initial source count
-    this._txtNumSources.value = "15";
+    this._txtNumSources.value = "25";
 
     // Initialize state
     this._running = false;
@@ -196,7 +196,7 @@ export class SWeaselVm {
     this._context.lineWidth = 2;
     this._context.strokeStyle = "green";
     this._context.fillStyle = "green";
-    for (let p of this._world.foodSources) {
+    for (const p of this._world.foodSources) {
       this._context.beginPath();
       this._context.arc(p.x, p.y, 10, 0, 2 * Math.PI, false);
       this._context.stroke();
@@ -209,7 +209,7 @@ export class SWeaselVm {
     this._context.lineWidth = 2;
     this._context.strokeStyle = "black";
     this._context.fillStyle = "black";
-    for (let c of this._world.stops()) {
+    for (const c of this._world.stops()) {
       this._context.beginPath();
       this._context.arc(c.x, c.y, 5, 0, 2 * Math.PI, false);
       this._context.fill(); // Use fill for solid dots
@@ -221,7 +221,7 @@ export class SWeaselVm {
 
     this._context.lineWidth = 1;
     this._context.strokeStyle = "black";
-    for (let l of this._world.paths()) {
+    for (const l of this._world.paths()) {
       this._context.beginPath();
       this._context.moveTo(l.start.x, l.start.y);
       this._context.lineTo(l.end.x, l.end.y);
@@ -235,7 +235,7 @@ export class SWeaselVm {
     this._context.lineWidth = 3;
     this._context.strokeStyle = "red";
     this._context.fillStyle = "red";
-    let p = this._world.badger.position;
+    const p = this._world.badger.position;
     this._context.beginPath();
     this._context.arc(p.x, p.y, 12, 0, 2 * Math.PI, false);
     this._context.stroke();
@@ -250,8 +250,8 @@ export class SWeaselVm {
     if (!this._world) return;
 
     // Use explicit methods from SWeaselWorld that provide the values
-    let calsSpent = this._world.parentSpentCalories();
-    let calsAcquired = this._world.parentAcquiredCalories();
+    const calsSpent = this._world.parentSpentCalories();
+    const calsAcquired = this._world.parentAcquiredCalories();
 
     // Update the UI
     this._lblAcquiredCalories.innerText = calsAcquired.toString();
