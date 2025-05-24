@@ -74,18 +74,20 @@ function processProps(props: ComponentProps): ComponentProps {
  * Parse WordPress content and replace component markers with React components
  */
 export function parseEmbeddedComponents(content: string): React.ReactNode {
-  // Split content by component markers
-  const parts = content.split(/(<div class="react-component"[^>]*><\/div>)/);
+  // Split content by component markers - handles both self-closing and regular divs
+  const parts = content.split(/(<div class="react-component"[^>]*>(?:<\/div>)?)/);
   
   return parts.map((part, index) => {
-    // Check if this part is a component marker
-    const componentMatch = /<div class="react-component" data-component="([^"]*)" data-props="([^"]*)"><\/div>/.exec(part);
+    // Check if this part is a component marker - handles single quotes around props
+    const componentMatch = /<div class="react-component" data-component="([^"]*)" data-props='([^']*)'>(?:<\/div>)?/.exec(part);
     
     if (componentMatch) {
       const [, componentName, propsJson] = componentMatch;
       
       try {
-        const props = JSON.parse(propsJson.replace(/&quot;/g, '"'));
+        // Parse the JSON props
+        const props = JSON.parse(propsJson);
+        
         return (
           <EmbeddedComponent 
             key={`component-${index}`}
@@ -94,10 +96,10 @@ export function parseEmbeddedComponents(content: string): React.ReactNode {
           />
         );
       } catch (error) {
-        console.error('Failed to parse component props:', error);
+        console.error('Failed to parse component props:', error, 'Raw props:', propsJson);
         return (
           <div key={`error-${index}`} style={{ color: 'red', padding: '10px' }}>
-            Error loading component: {componentName}
+            Error loading component: {componentName} - {error.message}
           </div>
         );
       }
