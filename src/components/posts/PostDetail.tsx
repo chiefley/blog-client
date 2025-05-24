@@ -15,10 +15,10 @@ import {
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { getPostBySlug } from '../../services/wordpressApi';
 import { WordPressPost } from '../../types/interfaces';
-import parse from 'html-react-parser';
 import LazyImage from '../common/LazyImage';
 import { getResponsiveImageUrl } from '../../utils/imageUtils';
 import { Comments } from '../comments';
+import { parseEmbeddedComponents } from '../embedded/ComponentRegistry';
 
 const PostDetail: React.FC = () => {
     const { slug } = useParams<{ slug: string }>();
@@ -51,45 +51,6 @@ const PostDetail: React.FC = () => {
 
         fetchPost();
     }, [slug]);
-
-    // Function to enhance the post content with lazy loading for images
-    const enhanceContent = (content: string): React.ReactNode => {
-        // Use a simple regex to identify img tags
-        const parsed = parse(content, {
-            replace: (domNode) => {
-                if (domNode.type === 'tag' && domNode.name === 'img') {
-                    // Extract attributes from the img tag
-                    const src = domNode.attribs?.src || '';
-                    const alt = domNode.attribs?.alt || '';
-                    const width = domNode.attribs?.width;
-                    const height = domNode.attribs?.height;
-                    
-                    // Process with Optimole if present - src is already checked for empty string
-                    const responsiveImageUrl = getResponsiveImageUrl(src, {
-                        mobile: { width: 480 },
-                        tablet: { width: 768 },
-                        desktop: { width: 1200 },
-                        quality: 80
-                    });
-                    
-                    // Add loading="lazy" attribute to enable native lazy loading
-                    return (
-                        <img 
-                            src={responsiveImageUrl}
-                            alt={alt} 
-                            width={width} 
-                            height={height}
-                            loading="lazy"
-                            style={{ maxWidth: '100%', height: 'auto' }}
-                        />
-                    );
-                }
-                return domNode;
-            }
-        });
-        
-        return parsed;
-    };
 
     if (loading) {
         return (
@@ -271,7 +232,7 @@ const PostDetail: React.FC = () => {
                     </Box>
                 ) : null}
 
-                {/* Post content with enhanced image loading */}
+                {/* Post content - Now using parseEmbeddedComponents instead of enhanceContent */}
                 <Box sx={{ 
                     '& img': { maxWidth: '100%', height: 'auto', borderRadius: 1 },
                     '& figure': { margin: '1rem 0' },
@@ -299,7 +260,7 @@ const PostDetail: React.FC = () => {
                         mb: 0.5
                     }
                 }}>
-                    {enhanceContent(content)}
+                    {parseEmbeddedComponents(content)}
                 </Box>
 
                 {/* Tags at the bottom - keep for reference */}
