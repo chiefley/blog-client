@@ -1,8 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Box, Slider, Typography, FormControlLabel, Switch } from '@mui/material';
+import { 
+  Box, 
+  Slider, 
+  Typography, 
+  FormControlLabel, 
+  Switch, 
+  IconButton,
+  Tooltip
+} from '@mui/material';
 import { WeaselSimulationOptimizer } from '../../libraries/weasels/weaselOptimizer';
 import SpeedIcon from '@mui/icons-material/Speed';
 import PetsIcon from '@mui/icons-material/Pets';
+import SettingsIcon from '@mui/icons-material/Settings';
 
 interface OptimizedWeaselSimulationProps {
   mutationLevel?: number; // 1-5, defaults to 5
@@ -16,17 +25,17 @@ interface OptimizedWeaselSimulationProps {
  * An optimized component that displays the weasel genetic algorithm simulation.
  */
 const OptimizedWeaselSimulation: React.FC<OptimizedWeaselSimulationProps> = ({
-                                                                               mutationLevel = 5,
-                                                                               withBadger: initialWithBadger = false,
-                                                                               initialFoodSources = 25,
-                                                                               height = 600,
-                                                                               showControls = true
-                                                                             }) => {
+  mutationLevel = 5,
+  withBadger: initialWithBadger = false,
+  initialFoodSources = 25,
+  height = 600,
+  showControls = true
+}) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const optimizerRef = useRef<WeaselSimulationOptimizer | null>(null);
   const [speed, setSpeed] = useState<number>(1.5); // Default to 1.5x speed
-
   const [withBadger, setWithBadger] = useState<boolean>(initialWithBadger);
+  const [showAdvancedControls, setShowAdvancedControls] = useState<boolean>(false);
 
   // Track if the simulation is initialized
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
@@ -87,8 +96,6 @@ const OptimizedWeaselSimulation: React.FC<OptimizedWeaselSimulationProps> = ({
     }
   }, [speed]);
 
-
-
   // Handle badger toggle and reinitialize the simulation
   const handleBadgerChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     // Stop any running simulation first
@@ -129,56 +136,13 @@ const OptimizedWeaselSimulation: React.FC<OptimizedWeaselSimulationProps> = ({
     setSpeed(newValue as number);
   };
 
-
-
   return (
     <Box sx={{ width: '100%', maxWidth: '1000px', margin: '0 auto' }}>
-      {showControls && (
-        <Box sx={{
-          mb: 2,
-          p: 2,
-          border: '1px solid',
-          borderColor: 'divider',
-          borderRadius: 1,
-          bgcolor: 'background.paper'
-        }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <SpeedIcon sx={{ mr: 1, color: 'primary.main' }} />
-            <Typography variant="subtitle1" fontWeight="medium">
-              Performance Settings
-            </Typography>
-          </Box>
-
-          <Typography id="speed-slider" gutterBottom>
-            Simulation Speed: {speed}x
-          </Typography>
-          <Slider
-            value={speed}
-            onChange={handleSpeedChange}
-            aria-labelledby="speed-slider"
-            step={0.5}
-            marks
-            min={0.5}
-            max={5}
-            valueLabelDisplay="auto"
-            sx={{ mb: 3 }}
-          />
-
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <PetsIcon sx={{ mr: 1, color: withBadger ? 'error.main' : 'text.disabled' }} />
-            <FormControlLabel
-              control={<Switch checked={withBadger} onChange={handleBadgerChange} />}
-              label="Include Badger (Predator)"
-            />
-          </Box>
-        </Box>
-      )}
-
       <Box
         ref={containerRef}
         sx={{
           width: '100%',
-          padding: 2,
+          padding: 1.5,
           position: 'relative',
           border: '1px solid',
           borderColor: 'divider',
@@ -187,21 +151,24 @@ const OptimizedWeaselSimulation: React.FC<OptimizedWeaselSimulationProps> = ({
           '& .stats': {
             display: 'flex',
             flexWrap: 'wrap',
-            justifyContent: 'flex-start', // Changed from space-between to flex-start
-            gap: 1, // Reduced from 2 to 1
-            maxWidth: '100%', // Changed from 600 to 100% to use full width
-            mb: 2, // Add margin bottom to separate from canvas
+            justifyContent: 'center',
+            gap: { xs: 0.5, sm: 1 },
+            maxWidth: '100%',
+            mb: 1.5,
             '& > div': {
-              px: 1.5, // Slightly increased padding for better readability
-              py: 0.5,
-              bgcolor: 'background.default',
-              borderRadius: 1,
-              border: '1px solid',
-              borderColor: 'divider',
-              whiteSpace: 'nowrap', // Prevent text wrapping within boxes
+              px: { xs: 0.75, sm: 1 },
+              py: { xs: 0.25, sm: 0.4 },
+              bgcolor: 'primary.main',
+              color: 'white',
+              borderRadius: 3,
+              fontSize: { xs: '0.7rem', sm: '0.75rem' },
+              fontWeight: 500,
+              whiteSpace: 'nowrap',
+              minWidth: 'fit-content',
+              textAlign: 'center',
               '& span': {
                 fontWeight: 'bold',
-                color: 'primary.main'
+                color: 'inherit'
               }
             }
           },
@@ -216,17 +183,18 @@ const OptimizedWeaselSimulation: React.FC<OptimizedWeaselSimulationProps> = ({
           '& .controls': {
             display: 'flex',
             flexWrap: 'wrap',
-            gap: 1,
-            mt: 2, // Add margin top to separate from canvas
+            gap: 0.5,
+            mt: 1,
             '& button': {
-              px: 2,
-              py: 1,
-              borderRadius: 1,
+              px: 1.5,
+              py: 0.5,
+              borderRadius: 0.5,
               bgcolor: 'primary.main',
               color: 'white',
               border: 'none',
               cursor: 'pointer',
-              mx: 0.5,
+              fontSize: '0.75rem',
+              fontWeight: 500,
               '&:hover': {
                 bgcolor: 'primary.dark'
               },
@@ -236,16 +204,109 @@ const OptimizedWeaselSimulation: React.FC<OptimizedWeaselSimulationProps> = ({
               }
             },
             '& input': {
-              p: 1,
-              borderRadius: 1,
+              p: 0.5,
+              borderRadius: 0.5,
               border: '1px solid',
               borderColor: 'divider',
-              mx: 1,
-              width: 60
+              mx: 0.5,
+              width: 50,
+              fontSize: '0.75rem'
+            },
+            '& label': {
+              fontSize: '0.75rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.5
             }
           }
         }}
       />
+
+      {/* Compact controls row */}
+      {showControls && (
+        <Box sx={{
+          mt: 1,
+          p: 1,
+          border: '1px solid',
+          borderColor: 'divider',
+          borderRadius: 1,
+          bgcolor: 'background.paper',
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          gap: 2,
+          justifyContent: 'space-between'
+        }}>
+          {/* Speed control - compact */}
+          <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 200 }}>
+            <SpeedIcon sx={{ mr: 0.5, fontSize: '1rem', color: 'primary.main' }} />
+            <Typography variant="caption" sx={{ mr: 1, minWidth: 45, fontSize: '0.75rem' }}>
+              {speed}x
+            </Typography>
+            <Slider
+              value={speed}
+              onChange={handleSpeedChange}
+              step={0.5}
+              min={0.5}
+              max={5}
+              size="small"
+              sx={{ flexGrow: 1, mx: 1 }}
+            />
+          </Box>
+
+          {/* Badger toggle - compact */}
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <PetsIcon sx={{ 
+              mr: 0.5, 
+              fontSize: '1rem',
+              color: withBadger ? 'error.main' : 'text.disabled' 
+            }} />
+            <FormControlLabel
+              control={
+                <Switch 
+                  checked={withBadger} 
+                  onChange={handleBadgerChange}
+                  size="small"
+                />
+              }
+              label={
+                <Typography variant="caption" sx={{ fontSize: '0.75rem' }}>
+                  Predator
+                </Typography>
+              }
+              sx={{ mr: 0 }}
+            />
+          </Box>
+
+          {/* Settings toggle for future expansion */}
+          <Tooltip title="Advanced Settings (Coming Soon)">
+            <IconButton 
+              size="small"
+              onClick={() => { setShowAdvancedControls(!showAdvancedControls); }}
+              disabled
+              sx={{ opacity: 0.5 }}
+            >
+              <SettingsIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Box>
+      )}
+
+      {/* Future: Advanced controls panel that can be toggled */}
+      {showAdvancedControls && (
+        <Box sx={{
+          mt: 1,
+          p: 1,
+          border: '1px solid',
+          borderColor: 'divider',
+          borderRadius: 1,
+          bgcolor: 'background.default'
+        }}>
+          <Typography variant="caption" color="text.secondary">
+            Advanced controls will be available here in future versions
+          </Typography>
+        </Box>
+      )}
     </Box>
   );
 };
