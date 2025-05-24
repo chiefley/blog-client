@@ -20,6 +20,7 @@
   - WordPress REST API Authentication (disabled for now)
   - Better REST API Featured Image (see development details below)
   - Max Mega Menu
+  - Shortcodes Ultimate
 
 ## Development Details
 - Parsing info from Better REST Featured Image plugin.   This fix below was necessary as the signature is different than what was anticipated:
