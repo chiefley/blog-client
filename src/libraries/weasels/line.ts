@@ -33,8 +33,6 @@ export class Line {
     const y = point.y;
     const x1 = this.start.x;
     const y1 = this.start.y;
-    const x2 = this.end.x;
-    const y2 = this.end.y;
 
     // Calculate squared length of the line segment
     const lengthSq = this._dx * this._dx + this._dy * this._dy;

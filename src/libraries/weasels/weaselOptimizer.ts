@@ -3,15 +3,15 @@ import { SWeaselVm } from './sweaselvm';
 
 export class WeaselSimulationOptimizer {
   private vm: SWeaselVm;
-  private animationFrameId: number = 0;
+  private animationFrameId = 0;
   private cycleInterval: number | null = null;
-  private lastCycleTime: number = 0;
-  private isRunning: boolean = false;
+  private lastCycleTime = 0;
+  private isRunning = false;
 
   constructor(
     private container: HTMLElement,
-    private mutationLevel: number,
-    private withBadger: boolean,
+    mutationLevel: number,
+    withBadger: boolean,
     private options: {
       speedMultiplier?: number,
       showFps?: boolean
@@ -29,16 +29,19 @@ export class WeaselSimulationOptimizer {
 
   private replaceRunButtonHandler(): void {
     // Find the run and stop buttons
-    const runButton = this.container.querySelector('.btnRun') as HTMLButtonElement;
-    const stopButton = this.container.querySelector('.btnStop') as HTMLButtonElement;
+    const runButtonElement = this.container.querySelector('.btnRun');
+    const stopButtonElement = this.container.querySelector('.btnStop');
 
-    if (runButton && stopButton) {
+    if (runButtonElement && stopButtonElement) {
+      const runButton = runButtonElement as HTMLButtonElement;
+      const stopButton = stopButtonElement as HTMLButtonElement;
+
       // Store original click handlers
       const originalRunClick = runButton.onclick;
       const originalStopClick = stopButton.onclick;
 
       // Replace run button handler
-      runButton.onclick = (e) => {
+      runButton.onclick = (e: MouseEvent) => {
         // Call original handler first
         if (originalRunClick) {
           originalRunClick.call(runButton, e);
@@ -49,7 +52,7 @@ export class WeaselSimulationOptimizer {
       };
 
       // Replace stop button handler
-      stopButton.onclick = (e) => {
+      stopButton.onclick = (e: MouseEvent) => {
         // Call original handler first
         if (originalStopClick) {
           originalStopClick.call(stopButton, e);
@@ -72,7 +75,7 @@ export class WeaselSimulationOptimizer {
     } else {
       // Faster speed - use optimized interval
       const interval = Math.max(10, Math.floor(500 / this.options.speedMultiplier!));
-      this.cycleInterval = window.setInterval(() => this.runWorldCycle(), interval);
+      this.cycleInterval = window.setInterval(() => { this.runWorldCycle(); }, interval);
     }
   }
 

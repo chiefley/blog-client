@@ -97,9 +97,10 @@ export function parseEmbeddedComponents(content: string): React.ReactNode {
         );
       } catch (error) {
         console.error('Failed to parse component props:', error, 'Raw props:', propsJson);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         return (
           <div key={`error-${index}`} style={{ color: 'red', padding: '10px' }}>
-            Error loading component: {componentName} - {error.message}
+            Error loading component: {componentName} - {errorMessage}
           </div>
         );
       }

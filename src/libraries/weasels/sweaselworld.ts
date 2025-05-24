@@ -13,11 +13,8 @@ export class SWeaselWorld {
 
   // Cache for fitness calculations
   private _lastFitnessWeasel: SWeasel | null = null;
-  private _lastSpentCalories: number = 0;
-  private _lastAcquiredCalories: number = 0;
-
-  // Track when food sources are modified
-  private _sourcesModified: boolean = true;
+  private _lastSpentCalories = 0;
+  private _lastAcquiredCalories = 0;
 
   constructor(sources: number, private mutationLevel: number, private withBadger: boolean) {
     // Preallocate food sources array
@@ -75,7 +72,7 @@ export class SWeaselWorld {
     for (let i = 0; i < len; i++) {
       this._children[i].mutate();
       if (this._children[i].isAlive()) {
-        let netCals = this.netCalories(this._children[i]);
+        const netCals = this.netCalories(this._children[i]);
         if (netCals > maxCals) {
           maxCals = netCals;
           maxIx = i;
@@ -105,9 +102,6 @@ export class SWeaselWorld {
         this.foodSources[sourceToMoveIx].randomMove(300);
       } while (!this.isInField(this.foodSources[sourceToMoveIx]));
     }
-
-    // Mark food sources as modified
-    this._sourcesModified = true;
 
     // Invalidate fitness cache
     this._lastFitnessWeasel = null;
@@ -209,10 +203,10 @@ export class SWeaselWorld {
     const stops = weas.stops();
 
     // Create a copy of food sources for this calculation
-    let sources = this.foodSources.slice(0);
+    const sources = this.foodSources.slice(0);
 
     // Process each stop in the weasel's path
-    for (let c of stops) {
+    for (const c of stops) {
       if (sources.length === 0) {
         break;
       }
@@ -251,8 +245,8 @@ export class SWeaselWorld {
   };
 
   private randomLocation = (): Point => {
-    let px = Math.random() * 1000;
-    let py = Math.random() * 1000;
+    const px = Math.random() * 1000;
+    const py = Math.random() * 1000;
     return new Point(px, py);
   };
 
@@ -264,7 +258,7 @@ export class SWeaselWorld {
   }
 
   private gaussian = (x: number, Mean: number, StdDev: number): number => {
-    let a = x - Mean;
+    const a = x - Mean;
     return Math.exp(-(a * a) / (2 * StdDev * StdDev));
   };
 }

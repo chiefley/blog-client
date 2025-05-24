@@ -110,8 +110,8 @@ export class SWeaselVm {
     this._world = new SWeaselWorld(numSources, this.mutationLevel, this.withBadger);
     this._generations = 0;
     this._world.init();
-    this.clearField();
-    this.DrawAll();
+    this.clearFieldPrivate();
+    this.drawAllPrivate();
   };
 
   private btnResetClick = (): void => {
@@ -150,8 +150,8 @@ export class SWeaselVm {
   private btnEarthquakeClick = (): void => {
     if (this._world) {
       this._world.earthquake();
-      this.clearField();
-      this.DrawAll();
+      this.clearFieldPrivate();
+      this.drawAllPrivate();
     }
   }
 
@@ -164,7 +164,7 @@ export class SWeaselVm {
     this._btnSingleStep.disabled = this._running || !this._initialized;
   };
 
-  private DrawAll = (): void => {
+  private drawAllPrivate = (): void => {
     if (!this._world) return;
 
     this.DrawSources();
@@ -173,7 +173,7 @@ export class SWeaselVm {
     if (this.withBadger) {
       this.DrawBadger();
     }
-    this.DisplayValues();
+    this.displayValuesPrivate();
   };
 
   private worldCycle = (): void => {
@@ -181,11 +181,11 @@ export class SWeaselVm {
 
     this._generations++;
     this._world.worldCycle();
-    this.clearField();
-    this.DrawAll();
+    this.clearFieldPrivate();
+    this.drawAllPrivate();
   };
 
-  private clearField = (): void => {
+  private clearFieldPrivate = (): void => {
     // Clear the entire canvas using the full coordinate space
     this._context.clearRect(0, 0, 1000, 1000);
   };
@@ -246,7 +246,7 @@ export class SWeaselVm {
     this._context.fill();
   };
 
-  private DisplayValues = (): void => {
+  private displayValuesPrivate = (): void => {
     if (!this._world) return;
 
     // Use explicit methods from SWeaselWorld that provide the values
@@ -265,16 +265,16 @@ export class SWeaselVm {
     return this._world;
   }
 
-  // Public methods for the optimizer to call
+  // Public methods for the optimizer to call (these delegate to private methods)
   public clearField(): void {
-    this.clearField();
+    this.clearFieldPrivate();
   }
 
   public DrawAll(): void {
-    this.DrawAll();
+    this.drawAllPrivate();
   }
 
   public DisplayValues(): void {
-    this.DisplayValues();
+    this.displayValuesPrivate();
   }
 }
