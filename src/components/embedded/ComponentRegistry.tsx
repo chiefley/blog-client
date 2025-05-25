@@ -1,6 +1,7 @@
 // src/components/embedded/ComponentRegistry.tsx
 import React, { ComponentType } from 'react';
 import OptimizedWeaselSimulation from '../common/OptimizedWeaselSimulation';
+import DawkinsWeaselSimulation from '../common/DawkinsWeaselSimulation';
 // Import other embeddable components here
 
 // Define the interface for component props
@@ -9,6 +10,7 @@ type ComponentProps = Record<string, any>;
 // Registry mapping component names to actual components
 const COMPONENT_REGISTRY: Record<string, ComponentType<any>> = {
   'GeneticAlgorithm': OptimizedWeaselSimulation,
+  'DawkinsWeasel': DawkinsWeaselSimulation,
   // Add more components as needed:
   // 'ChartComponent': ChartComponent,
   // 'InteractiveMap': InteractiveMap,
