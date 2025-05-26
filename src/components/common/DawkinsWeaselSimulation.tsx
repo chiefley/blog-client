@@ -1,8 +1,8 @@
 // src/components/common/DawkinsWeaselSimulation.tsx
 import React, { useEffect, useRef, useState } from 'react';
-import { Box, Typography, TextField, Button, Paper } from '@mui/material';
+import { Box, Typography, TextField, Button, Paper, Slider } from '@mui/material';
 
-// Import the Dawkins weasel classes (we'll need to convert them to proper ES modules)
+// Import the Dawkins weasel classes (converted to proper ES modules)
 class DWeasel {
     private dna: string;
     
@@ -145,19 +145,18 @@ interface DawkinsWeaselSimulationProps {
 const DawkinsWeaselSimulation: React.FC<DawkinsWeaselSimulationProps> = ({
   targetString: initialTargetString = "Methinks it is like a weasel.",
   maxGenerations = 1000,
-  height = 400,
+  height = 300,
   showControls = true
 }) => {
   const worldRef = useRef<DWeaselWorld | null>(null);
   const cycleTimerRef = useRef<number>(0);
   
   const [targetString, setTargetString] = useState<string>(initialTargetString);
-  const [currentString, setCurrentString] = useState<string>('');
   const [generations, setGenerations] = useState<number>(0);
   const [results, setResults] = useState<string[]>([]);
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
-  const [fitness, setFitness] = useState<number>(0);
+  const [speed, setSpeed] = useState<number>(2); // Speed multiplier (0.5x to 5x)
 
   // Initialize the world
   const initializeWorld = () => {
@@ -167,79 +166,35 @@ const DawkinsWeaselSimulation: React.FC<DawkinsWeaselSimulationProps> = ({
     worldRef.current = new DWeaselWorld(targetString, startString);
     worldRef.current.init();
     
-    setCurrentString(startString);
     setGenerations(0);
     setResults([]);
     setIsInitialized(true);
-    setFitness(calculateFitness(startString, targetString));
     
-    // Add initial result
+    // Add initial result with generation 0
     setResults([`${startString} (0)`]);
-  };
-
-  // Calculate fitness as percentage match
-  const calculateFitness = (current: string, target: string): number => {
-    if (target.length === 0) return 100;
-    const editDistance = getEditDistance(current, target);
-    const maxDistance = Math.max(current.length, target.length);
-    return Math.max(0, Math.round(((maxDistance - editDistance) / maxDistance) * 100));
-  };
-
-  // Simple edit distance calculation for fitness display
-  const getEditDistance = (a: string, b: string): number => {
-    if (a.length === 0) return b.length;
-    if (b.length === 0) return a.length;
-
-    const matrix: number[][] = [];
-
-    for (let i = 0; i <= b.length; i++) {
-      matrix[i] = [i];
-    }
-
-    for (let j = 0; j <= a.length; j++) {
-      matrix[0][j] = j;
-    }
-
-    for (let i = 1; i <= b.length; i++) {
-      for (let j = 1; j <= a.length; j++) {
-        if (b.charAt(i - 1) === a.charAt(j - 1)) {
-          matrix[i][j] = matrix[i - 1][j - 1];
-        } else {
-          matrix[i][j] = Math.min(
-            matrix[i - 1][j - 1] + 1, // substitution
-            Math.min(
-              matrix[i][j - 1] + 1, // insertion
-              matrix[i - 1][j] + 1   // deletion
-            )
-          );
-        }
-      }
-    }
-
-    return matrix[b.length][a.length];
   };
 
   // World cycle
   const worldCycle = () => {
     if (!worldRef.current) return;
 
-    const newGenerations = generations + 1;
-    setGenerations(newGenerations);
-    
-    worldRef.current.worldCycle();
-    const bestDna = worldRef.current.bestDna();
-    setCurrentString(bestDna);
-    
-    const newFitness = calculateFitness(bestDna, targetString);
-    setFitness(newFitness);
-    
-    // Add result to the beginning of the array
-    setResults(prevResults => [`${bestDna} (${newGenerations})`, ...prevResults.slice(0, 19)]);
-    
-    // Check if we've reached the target or max generations
-    if (bestDna === targetString || newGenerations >= maxGenerations) {
-      stopSimulation();
-    }
+    setGenerations(prevGen => {
+      const newGenerations = prevGen + 1;
+      
+      worldRef.current!.worldCycle();
+      const bestDna = worldRef.current!.bestDna();
+      
+      // Add result to the beginning of the array, keep all results
+      setResults(prevResults => [`${bestDna} (${newGenerations})`, ...prevResults]);
+      
+      // Check if we've reached the target or max generations
+      if (bestDna === targetString || newGenerations >= maxGenerations) {
+        // Use setTimeout to avoid calling stopSimulation during state update
+        setTimeout(() => { stopSimulation(); }, 0);
+      }
+      
+      return newGenerations;
+    });
   };
 
   // Start simulation
@@ -247,7 +202,8 @@ const DawkinsWeaselSimulation: React.FC<DawkinsWeaselSimulationProps> = ({
     if (!isInitialized) return;
     
     setIsRunning(true);
-    cycleTimerRef.current = window.setInterval(worldCycle, 200); // Faster than the original 500ms
+    const interval = Math.max(50, Math.floor(500 / speed)); // 50ms minimum, up to 500ms
+    cycleTimerRef.current = window.setInterval(worldCycle, interval);
   };
 
   // Stop simulation
@@ -263,6 +219,20 @@ const DawkinsWeaselSimulation: React.FC<DawkinsWeaselSimulationProps> = ({
   const resetSimulation = () => {
     stopSimulation();
     initializeWorld();
+  };
+
+  // Handle speed change
+  const handleSpeedChange = (_event: Event, newValue: number | number[]) => {
+    const newSpeed = newValue as number;
+    setSpeed(newSpeed);
+    
+    // If currently running, restart with new speed
+    if (isRunning) {
+      stopSimulation();
+      const interval = Math.max(50, Math.floor(500 / newSpeed));
+      cycleTimerRef.current = window.setInterval(worldCycle, interval);
+      setIsRunning(true);
+    }
   };
 
   // Handle target string change
@@ -289,180 +259,154 @@ const DawkinsWeaselSimulation: React.FC<DawkinsWeaselSimulationProps> = ({
   }, [targetString]);
 
   return (
-    <Paper sx={{ p: 3, maxWidth: 800, margin: '0 auto' }}>
-      <Typography variant="h5" component="h2" gutterBottom>
-        Dawkins' Weasel Algorithm
-      </Typography>
-      
-      <Typography variant="body2" color="text.secondary" paragraph>
-        This simulation demonstrates Richard Dawkins' famous "weasel" program from 
-        "The Blind Watchmaker", showing how random mutations combined with selection 
-        can evolve toward a target string.
-      </Typography>
-
-      {showControls && (
-        <Box sx={{ mb: 3 }}>
-          <TextField
-            fullWidth
-            label="Target String"
-            value={targetString}
-            onChange={handleTargetStringChange}
-            disabled={isRunning}
-            variant="outlined"
-            size="small"
-            sx={{ mb: 2 }}
-          />
-          
-          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-            <Button
-              variant="contained"
-              onClick={resetSimulation}
-              disabled={isRunning}
-              size="small"
-            >
-              Reset
-            </Button>
-            <Button
-              variant="contained"
-              onClick={startSimulation}
-              disabled={isRunning || !isInitialized}
-              size="small"
-            >
-              Run
-            </Button>
-            <Button
-              variant="outlined"
-              onClick={stopSimulation}
-              disabled={!isRunning}
-              size="small"
-            >
-              Stop
-            </Button>
-          </Box>
-        </Box>
-      )}
-
-      {/* Status Display */}
-      <Box sx={{ 
-        display: 'flex', 
-        flexWrap: 'wrap', 
-        gap: 2, 
-        mb: 3,
-        p: 2,
-        bgcolor: 'background.default',
-        borderRadius: 1
-      }}>
-        <Box>
-          <Typography variant="caption" color="text.secondary">Generation</Typography>
-          <Typography variant="h6" color="primary.main">{generations}</Typography>
-        </Box>
-        <Box>
-          <Typography variant="caption" color="text.secondary">Fitness</Typography>
-          <Typography variant="h6" color="primary.main">{fitness}%</Typography>
-        </Box>
-        <Box sx={{ flexGrow: 1 }}>
-          <Typography variant="caption" color="text.secondary">Current Best</Typography>
-          <Typography 
-            variant="body1" 
-            sx={{ 
-              fontFamily: 'monospace',
-              bgcolor: 'white',
-              p: 1,
-              borderRadius: 0.5,
-              border: '1px solid',
-              borderColor: 'divider',
-              wordBreak: 'break-all'
-            }}
-          >
-            {currentString || 'Not initialized'}
-          </Typography>
-        </Box>
-      </Box>
-
-      {/* Target vs Current Comparison */}
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="subtitle2" gutterBottom>Target vs Current</Typography>
-        <Box sx={{ 
-          display: 'flex', 
-          flexDirection: 'column', 
-          gap: 1,
-          fontFamily: 'monospace',
-          fontSize: '0.9rem'
-        }}>
-          <Box sx={{ p: 1, bgcolor: 'success.light', borderRadius: 0.5, color: 'success.contrastText' }}>
-            <strong>Target:</strong> {targetString}
-          </Box>
-          <Box sx={{ p: 1, bgcolor: 'info.light', borderRadius: 0.5, color: 'info.contrastText' }}>
-            <strong>Current:</strong> {currentString}
-          </Box>
-          {/* Character-by-character comparison */}
-          <Box sx={{ p: 1, bgcolor: 'background.default', borderRadius: 0.5, fontSize: '0.8rem' }}>
-            <strong>Match:</strong> {
-              targetString.split('').map((char, index) => (
-                <span 
-                  key={index} 
-                  style={{ 
-                    backgroundColor: currentString[index] === char ? '#c8e6c9' : '#ffcdd2',
-                    padding: '1px 2px',
-                    margin: '0 1px'
-                  }}
-                >
-                  {currentString[index] || '_'}
-                </span>
-              ))
-            }
-          </Box>
-        </Box>
-      </Box>
+    <Paper sx={{ p: 1.5, maxWidth: 600, margin: '0 auto', border: '1px solid', borderColor: 'divider' }}>
+      {/* Target String Input */}
+      <TextField
+        fullWidth
+        label="Target String"
+        value={targetString}
+        onChange={handleTargetStringChange}
+        disabled={isRunning}
+        variant="outlined"
+        size="small"
+        sx={{ mb: 1.5 }}
+      />
 
       {/* Results History */}
-      <Box>
-        <Typography variant="subtitle2" gutterBottom>Evolution History</Typography>
-        <Box sx={{ 
-          height: height - 200,
-          overflow: 'auto',
-          bgcolor: 'background.default',
-          border: '1px solid',
-          borderColor: 'divider',
-          borderRadius: 1,
-          p: 1
-        }}>
-          {results.map((result, index) => (
-            <Typography 
-              key={index} 
-              variant="body2" 
-              sx={{ 
-                fontFamily: 'monospace',
-                fontSize: '0.8rem',
-                mb: 0.5,
-                opacity: index === 0 ? 1 : Math.max(0.3, 1 - (index * 0.05))
-              }}
-            >
-              {result}
-            </Typography>
-          ))}
-          {results.length === 0 && (
-            <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-              Results will appear here when the simulation runs...
-            </Typography>
-          )}
-        </Box>
+      <Box sx={{ 
+        height: height,
+        overflow: 'auto',
+        bgcolor: 'background.default',
+        border: '1px solid',
+        borderColor: 'divider',
+        borderRadius: 1,
+        p: 1,
+        mb: 1.5,
+        '& .MuiTypography-root': {
+          marginBottom: '0 !important',
+          lineHeight: '1.1 !important'
+        }
+      }}>
+        {results.map((result, index) => (
+          <Typography 
+            key={index} 
+            variant="body2" 
+            sx={{ 
+              fontFamily: 'monospace',
+              fontSize: '0.85rem',
+              mb: 0,
+              lineHeight: 1.2,
+              color: index === 0 ? 'primary.main' : 'text.primary',
+              fontWeight: index === 0 ? 'bold' : 'normal'
+            }}
+          >
+            {result}
+          </Typography>
+        ))}
+        {results.length === 0 && (
+          <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+            Results will appear here when the simulation runs...
+          </Typography>
+        )}
       </Box>
 
-      {/* Success message */}
-      {currentString === targetString && (
+      {/* Controls Row */}
+      <Box sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: 0.5,
+        flexWrap: 'wrap'
+      }}>
+        <Button
+          variant="contained"
+          onClick={resetSimulation}
+          disabled={isRunning}
+          size="small"
+          sx={{
+            px: 1,
+            py: 0.25,
+            fontSize: '0.7rem',
+            minWidth: 45,
+            height: 28
+          }}
+        >
+          Reset
+        </Button>
+        <Button
+          variant="contained"
+          onClick={startSimulation}
+          disabled={isRunning || !isInitialized}
+          size="small"
+          sx={{
+            px: 1,
+            py: 0.25,
+            fontSize: '0.7rem',
+            minWidth: 35,
+            height: 28
+          }}
+        >
+          Run
+        </Button>
+        <Button
+          variant="outlined"
+          onClick={stopSimulation}
+          disabled={!isRunning}
+          size="small"
+          sx={{
+            px: 1,
+            py: 0.25,
+            fontSize: '0.7rem',
+            minWidth: 35,
+            height: 28
+          }}
+        >
+          Stop
+        </Button>
+        
+        {/* Speed Control */}
         <Box sx={{ 
-          mt: 2, 
-          p: 2, 
-          bgcolor: 'success.light', 
-          borderRadius: 1,
-          textAlign: 'center'
+          display: 'flex', 
+          alignItems: 'center',
+          ml: 1,
+          minWidth: 120
         }}>
-          <Typography variant="h6" color="success.contrastText">
-            🎉 Target Reached in {generations} Generations! 🎉
+          <Typography variant="caption" sx={{ mr: 0.5, fontSize: '0.7rem', minWidth: 25 }}>
+            {speed}x
+          </Typography>
+          <Slider
+            value={speed}
+            onChange={handleSpeedChange}
+            step={0.5}
+            min={0.5}
+            max={5}
+            size="small"
+            sx={{ 
+              width: 80,
+              height: 20,
+              '& .MuiSlider-thumb': {
+                width: 12,
+                height: 12
+              }
+            }}
+          />
+        </Box>
+        
+        {/* Generation Counter */}
+        <Box sx={{ 
+          ml: 'auto', 
+          display: 'flex', 
+          alignItems: 'center',
+          fontSize: '0.7rem',
+          color: 'text.secondary'
+        }}>
+          <Typography variant="caption" sx={{ mr: 0.5, fontSize: '0.7rem' }}>
+            Gen:
+          </Typography>
+          <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'primary.main', fontSize: '0.7rem' }}>
+            {generations}
           </Typography>
         </Box>
-      )}
+      </Box>
     </Paper>
   );
 };

@@ -297,17 +297,5 @@ function genetic_algorithm_shortcode($atts, $content = null) {
     return '<div class="react-component" data-component="GeneticAlgorithm" data-props=\'' . $props_json . '\'></div>';
 }
 
-// Register the shortcode
-add_shortcode('genetic-algorithm', 'genetic_algorithm_shortcode');
 
-// Also register alternative name
-add_shortcode('weasel-simulation', 'genetic_algorithm_shortcode');
 
-// Ensure shortcodes are processed in post content
-add_filter('the_content', 'do_shortcode', 11);
-
-?>
-
-...
-
-*Last updated: January 2025*
