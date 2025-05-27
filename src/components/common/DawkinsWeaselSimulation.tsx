@@ -260,17 +260,19 @@ const DawkinsWeaselSimulation: React.FC<DawkinsWeaselSimulationProps> = ({
 
   return (
     <Paper sx={{ p: 1.5, maxWidth: 600, margin: '0 auto', border: '1px solid', borderColor: 'divider' }}>
-      {/* Target String Input */}
-      <TextField
-        fullWidth
-        label="Target String"
-        value={targetString}
-        onChange={handleTargetStringChange}
-        disabled={isRunning}
-        variant="outlined"
-        size="small"
-        sx={{ mb: 1.5 }}
-      />
+      {/* Target String Input - conditionally rendered based on showControls */}
+      {showControls && (
+        <TextField
+          fullWidth
+          label="Target String"
+          value={targetString}
+          onChange={handleTargetStringChange}
+          disabled={isRunning}
+          variant="outlined"
+          size="small"
+          sx={{ mb: 1.5 }}
+        />
+      )}
 
       {/* Results History */}
       <Box sx={{ 
@@ -310,103 +312,105 @@ const DawkinsWeaselSimulation: React.FC<DawkinsWeaselSimulationProps> = ({
         )}
       </Box>
 
-      {/* Controls Row */}
-      <Box sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: 0.5,
-        flexWrap: 'wrap'
-      }}>
-        <Button
-          variant="contained"
-          onClick={resetSimulation}
-          disabled={isRunning}
-          size="small"
-          sx={{
-            px: 1,
-            py: 0.25,
-            fontSize: '0.7rem',
-            minWidth: 45,
-            height: 28
-          }}
-        >
-          Reset
-        </Button>
-        <Button
-          variant="contained"
-          onClick={startSimulation}
-          disabled={isRunning || !isInitialized}
-          size="small"
-          sx={{
-            px: 1,
-            py: 0.25,
-            fontSize: '0.7rem',
-            minWidth: 35,
-            height: 28
-          }}
-        >
-          Run
-        </Button>
-        <Button
-          variant="outlined"
-          onClick={stopSimulation}
-          disabled={!isRunning}
-          size="small"
-          sx={{
-            px: 1,
-            py: 0.25,
-            fontSize: '0.7rem',
-            minWidth: 35,
-            height: 28
-          }}
-        >
-          Stop
-        </Button>
-        
-        {/* Speed Control */}
+      {/* Controls Row - conditionally rendered based on showControls */}
+      {showControls && (
         <Box sx={{ 
           display: 'flex', 
-          alignItems: 'center',
-          ml: 1,
-          minWidth: 120
+          alignItems: 'center', 
+          gap: 0.5,
+          flexWrap: 'wrap'
         }}>
-          <Typography variant="caption" sx={{ mr: 0.5, fontSize: '0.7rem', minWidth: 25 }}>
-            {speed}x
-          </Typography>
-          <Slider
-            value={speed}
-            onChange={handleSpeedChange}
-            step={0.5}
-            min={0.5}
-            max={5}
+          <Button
+            variant="contained"
+            onClick={resetSimulation}
+            disabled={isRunning}
             size="small"
-            sx={{ 
-              width: 80,
-              height: 20,
-              '& .MuiSlider-thumb': {
-                width: 12,
-                height: 12
-              }
+            sx={{
+              px: 1,
+              py: 0.25,
+              fontSize: '0.7rem',
+              minWidth: 45,
+              height: 28
             }}
-          />
+          >
+            Reset
+          </Button>
+          <Button
+            variant="contained"
+            onClick={startSimulation}
+            disabled={isRunning || !isInitialized}
+            size="small"
+            sx={{
+              px: 1,
+              py: 0.25,
+              fontSize: '0.7rem',
+              minWidth: 35,
+              height: 28
+            }}
+          >
+            Run
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={stopSimulation}
+            disabled={!isRunning}
+            size="small"
+            sx={{
+              px: 1,
+              py: 0.25,
+              fontSize: '0.7rem',
+              minWidth: 35,
+              height: 28
+            }}
+          >
+            Stop
+          </Button>
+          
+          {/* Speed Control */}
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center',
+            ml: 1,
+            minWidth: 120
+          }}>
+            <Typography variant="caption" sx={{ mr: 0.5, fontSize: '0.7rem', minWidth: 25 }}>
+              {speed}x
+            </Typography>
+            <Slider
+              value={speed}
+              onChange={handleSpeedChange}
+              step={0.5}
+              min={0.5}
+              max={5}
+              size="small"
+              sx={{ 
+                width: 80,
+                height: 20,
+                '& .MuiSlider-thumb': {
+                  width: 12,
+                  height: 12
+                }
+              }}
+            />
+          </Box>
+          
+          {/* Generation Counter */}
+          <Box sx={{ 
+            ml: 'auto', 
+            display: 'flex', 
+            alignItems: 'center',
+            fontSize: '0.7rem',
+            color: 'text.secondary'
+          }}>
+            <Typography variant="caption" sx={{ mr: 0.5, fontSize: '0.7rem' }}>
+              Gen:
+            </Typography>
+            <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'primary.main', fontSize: '0.7rem' }}>
+              {generations}
+            </Typography>
+          </Box>
         </Box>
-        
-        {/* Generation Counter */}
-        <Box sx={{ 
-          ml: 'auto', 
-          display: 'flex', 
-          alignItems: 'center',
-          fontSize: '0.7rem',
-          color: 'text.secondary'
-        }}>
-          <Typography variant="caption" sx={{ mr: 0.5, fontSize: '0.7rem' }}>
-            Gen:
-          </Typography>
-          <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'primary.main', fontSize: '0.7rem' }}>
-            {generations}
-          </Typography>
-        </Box>
-      </Box>
+      )}
     </Paper>
   );
 };

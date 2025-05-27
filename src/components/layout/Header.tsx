@@ -9,11 +9,16 @@ import {
   Button,
   useMediaQuery,
   useTheme,
-  Skeleton
+  Skeleton,
+  Menu,
+  MenuItem,
+  Avatar
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import CloseIcon from '@mui/icons-material/Close';
+import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import { useSiteInfo } from '../../contexts/SiteInfoContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 // Props for the Header component
 interface HeaderProps {
@@ -25,12 +30,29 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, sidebarOpen }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { siteInfo, loading } = useSiteInfo();
+  const { user, isAuthenticated, logout } = useAuth();
+  
+  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+  const userMenuOpen = Boolean(anchorEl);
   
   const navItems = [
     { title: 'Home', path: '/' },
     { title: 'About', path: '/about' },
     { title: 'Contact', path: '/contact' }
   ];
+
+  const handleUserMenuClick = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleUserMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleLogout = () => {
+    logout();
+    handleUserMenuClose();
+  };
 
   // Modified logo/title section with site info from WordPress
   const renderSiteTitle = () => {
@@ -139,6 +161,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, sidebarOpen }) => {
         {/* Site title/logo from WordPress */}
         {renderSiteTitle()}
         
+        {/* Navigation items for desktop */}
         <Box sx={{ display: { xs: 'none', md: 'block' } }}>
           {navItems.map((item) => (
             <Button 
@@ -152,6 +175,51 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, sidebarOpen }) => {
             </Button>
           ))}
         </Box>
+
+        {/* User menu */}
+        {isAuthenticated && user ? (
+          <>
+            <IconButton
+              onClick={handleUserMenuClick}
+              sx={{ ml: 1 }}
+              color="inherit"
+            >
+              <Avatar sx={{ width: 32, height: 32 }}>
+                {user.name ? user.name.charAt(0).toUpperCase() : user.username.charAt(0).toUpperCase()}
+              </Avatar>
+            </IconButton>
+            <Menu
+              anchorEl={anchorEl}
+              open={userMenuOpen}
+              onClose={handleUserMenuClose}
+              anchorOrigin={{
+                vertical: 'bottom',
+                horizontal: 'right',
+              }}
+              transformOrigin={{
+                vertical: 'top',
+                horizontal: 'right',
+              }}
+            >
+              <MenuItem disabled>
+                <Typography variant="body2" color="text.secondary">
+                  {user.name || user.username}
+                </Typography>
+              </MenuItem>
+              <MenuItem onClick={handleLogout}>
+                Logout
+              </MenuItem>
+            </Menu>
+          </>
+        ) : (
+          <IconButton
+            color="inherit"
+            sx={{ ml: 1 }}
+            title="Login"
+          >
+            <AccountCircleIcon />
+          </IconButton>
+        )}
       </Toolbar>
     </AppBar>
   );
