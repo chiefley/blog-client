@@ -1,6 +1,7 @@
 // src/services/wordpressApi.ts
 import { WordPressPost, Category, Comment, CommentData, SiteInfo } from '../types/interfaces';
 import { getCurrentBlogPath } from '../config/multisiteConfig';
+import { createAuthHeader } from '../contexts/AuthContext';
 
 // Base API URL from environment variables
 const API_BASE_URL = import.meta.env.VITE_WP_API_BASE_URL || 'https://wpcms.thechief.com';
@@ -50,6 +51,39 @@ export const getRootApiUrl = (): string => {
 };
 
 /**
+ * Create request options with authentication headers when available
+ */
+const createRequestOptions = (includeAuth = true): RequestInit => {
+  const options: RequestInit = {
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  };
+
+  // Add authentication header if available and requested
+  if (includeAuth) {
+    const authHeader = createAuthHeader();
+    if (authHeader && Object.keys(authHeader).length > 0) {
+      options.headers = {
+        ...options.headers,
+        ...authHeader
+      };
+      console.log('🔐 Using authentication header for API request');
+    }
+  }
+
+  return options;
+};
+
+/**
+ * Check if user is authenticated (has valid auth header)
+ */
+const isAuthenticated = (): boolean => {
+  const authHeader = createAuthHeader();
+  return authHeader && Object.keys(authHeader).length > 0;
+};
+
+/**
  * Get site information
  */
 export const getSiteInfo = async (): Promise<SiteInfo> => {
@@ -94,7 +128,7 @@ export const getSiteInfo = async (): Promise<SiteInfo> => {
       
       // Make the request with timeout
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5-second timeout
+      const timeoutId = setTimeout(() => { controller.abort(); }, 5000); // 5-second timeout
       
       try {
         requestOptions.signal = controller.signal;
@@ -205,7 +239,7 @@ export const getSiteInfo = async (): Promise<SiteInfo> => {
 };
 
 /**
- * Get posts with optional filtering
+ * Get posts with optional filtering - now includes draft support
  */
 export const getPosts = async (options: {
   page?: number;
@@ -213,8 +247,9 @@ export const getPosts = async (options: {
   categoryId?: number;
   categorySlug?: string | null;
   search?: string;
+  includeDrafts?: boolean; // New option to include drafts
 } = {}): Promise<{ posts: WordPressPost[]; totalPages: number }> => {
-  const { page = 1, perPage = 10, categoryId, categorySlug, search } = options;
+  const { page = 1, perPage = 10, categoryId, categorySlug, search, includeDrafts = false } = options;
 
   const params = new URLSearchParams();
   params.append('page', page.toString());
@@ -243,19 +278,26 @@ export const getPosts = async (options: {
     params.append('search', search);
   }
 
+  // Include drafts if user is authenticated and includeDrafts is true
+  const userIsAuthenticated = isAuthenticated();
+  if (includeDrafts && userIsAuthenticated) {
+    params.append('status', 'publish,draft');
+    console.log('🔍 Including draft posts in request (user is authenticated)');
+  } else if (includeDrafts && !userIsAuthenticated) {
+    console.log('⚠️ Draft posts requested but user is not authenticated, showing published only');
+  }
+
   const apiUrl = getApiUrl();
   const requestUrl = `${apiUrl}/posts?${params}`;
   
   try {
-    // Create request options
-    const requestOptions: RequestInit = {
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    };
+    // Create request options with auth if user is authenticated
+    const requestOptions = createRequestOptions(userIsAuthenticated);
 
     // For debugging - log the request details
     console.log('Request URL:', requestUrl);
+    console.log('Request includes auth:', userIsAuthenticated);
+    console.log('Include drafts:', includeDrafts);
 
     const response = await fetch(requestUrl, requestOptions);
     
@@ -263,6 +305,8 @@ export const getPosts = async (options: {
     console.log(`Posts API Response [${response.status}]:`, {
       url: requestUrl,
       status: response.status,
+      authenticated: userIsAuthenticated,
+      includeDrafts: includeDrafts,
       headers: {
         'X-WP-Total': response.headers.get('X-WP-Total'),
         'X-WP-TotalPages': response.headers.get('X-WP-TotalPages')
@@ -286,7 +330,13 @@ export const getPosts = async (options: {
     const posts = await response.json();
     const totalPages = parseInt(response.headers.get('X-WP-TotalPages') || '1', 10);
     
-    console.log(`Successfully fetched ${posts.length} posts, total pages: ${totalPages}`);
+    // Log draft posts found
+    const draftPosts = posts.filter((post: WordPressPost) => post.status === 'draft');
+    if (draftPosts.length > 0) {
+      console.log(`📝 Found ${draftPosts.length} draft posts in response`);
+    }
+    
+    console.log(`Successfully fetched ${posts.length} posts (${draftPosts.length} drafts), total pages: ${totalPages}`);
     return { posts, totalPages };
   } catch (error) {
     console.error('Error fetching posts:', error);
@@ -295,27 +345,32 @@ export const getPosts = async (options: {
 };
 
 /**
- * Get a single post by slug
+ * Get a single post by slug - now includes draft support
  */
-export const getPostBySlug = async (slug: string): Promise<WordPressPost | null> => {
+export const getPostBySlug = async (slug: string, includeDrafts = false): Promise<WordPressPost | null> => {
   const params = new URLSearchParams();
   params.append('slug', slug);
   params.append('_embed', 'author,wp:featuredmedia,wp:term');
+
+  // Include drafts if user is authenticated and includeDrafts is true
+  const userIsAuthenticated = isAuthenticated();
+  if (includeDrafts && userIsAuthenticated) {
+    params.append('status', 'publish,draft');
+    console.log('🔍 Including draft posts in single post request');
+  }
 
   const apiUrl = getApiUrl();
   const requestUrl = `${apiUrl}/posts?${params}`;
 
   try {
-    // Create request options
-    const requestOptions: RequestInit = {
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    };
+    // Create request options with auth if user is authenticated
+    const requestOptions = createRequestOptions(userIsAuthenticated);
 
     // For debugging - log the request
     console.log('Fetching post by slug:', slug);
     console.log('Request URL:', requestUrl);
+    console.log('Include drafts:', includeDrafts);
+    console.log('User authenticated:', userIsAuthenticated);
 
     const response = await fetch(requestUrl, requestOptions);
     
@@ -323,7 +378,9 @@ export const getPostBySlug = async (slug: string): Promise<WordPressPost | null>
     console.log(`Post by Slug API Response [${response.status}]:`, {
       slug,
       url: requestUrl,
-      status: response.status
+      status: response.status,
+      authenticated: userIsAuthenticated,
+      includeDrafts: includeDrafts
     });
     
     if (!response.ok) {
@@ -342,7 +399,13 @@ export const getPostBySlug = async (slug: string): Promise<WordPressPost | null>
     const posts = await response.json();
     
     // The API returns an array, but we only want the first post with this slug
-    return posts.length > 0 ? posts[0] : null;
+    const post = posts.length > 0 ? posts[0] : null;
+    
+    if (post && post.status === 'draft') {
+      console.log(`📝 Retrieved draft post: "${post.title.rendered}"`);
+    }
+    
+    return post;
   } catch (error) {
     console.error('Error fetching post by slug:', error);
     return null;
@@ -357,12 +420,8 @@ export const getCategories = async (): Promise<Category[]> => {
   const requestUrl = `${apiUrl}/categories?per_page=100`;
 
   try {
-    // Create request options
-    const requestOptions: RequestInit = {
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    };
+    // Create request options - categories don't typically need auth but include it anyway
+    const requestOptions = createRequestOptions(true);
 
     console.log('Fetching categories');
     console.log('Categories request URL:', requestUrl);
@@ -406,11 +465,7 @@ export const getCategoryBySlug = async (slug: string): Promise<Category | null> 
 
   try {
     // Create request options
-    const requestOptions: RequestInit = {
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    };
+    const requestOptions = createRequestOptions(true);
 
     console.log('Fetching category by slug:', slug);
     console.log('Request URL:', requestUrl);
@@ -456,11 +511,7 @@ export const getTags = async (): Promise<any[]> => {
 
   try {
     // Create request options
-    const requestOptions: RequestInit = {
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    };
+    const requestOptions = createRequestOptions(true);
 
     console.log('Fetching tags');
     console.log('Tags request URL:', requestUrl);
@@ -504,11 +555,7 @@ export const getComments = async (postId: number): Promise<Comment[]> => {
   
   try {
     // Create request options
-    const requestOptions: RequestInit = {
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    };
+    const requestOptions = createRequestOptions(true);
 
     console.log('Fetching comments for post:', postId);
     console.log('Request URL:', requestUrl);
@@ -551,11 +598,12 @@ export const postComment = async (commentData: CommentData): Promise<Comment | n
   const requestUrl = `${apiUrl}/comments`;
   
   try {
-    // Create request options with comment data
+    // Create request options with comment data and auth
     const requestOptions: RequestInit = {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        ...createAuthHeader() // Always include auth for posting comments
       },
       body: JSON.stringify(commentData)
     };

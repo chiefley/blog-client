@@ -13,6 +13,8 @@ import {
     Button
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import EditIcon from '@mui/icons-material/Edit';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import { getPostBySlug } from '../../services/wordpressApi';
 import { WordPressPost } from '../../types/interfaces';
 import LazyImage from '../common/LazyImage';
@@ -34,7 +36,8 @@ const PostDetail: React.FC = () => {
             setError(null);
 
             try {
-                const postData = await getPostBySlug(slug);
+                // Try to get post including drafts if user is authenticated
+                const postData = await getPostBySlug(slug, true);
                 
                 if (postData) {
                     setPost(postData);
@@ -150,11 +153,60 @@ const PostDetail: React.FC = () => {
                 Back to Posts
             </Button>
 
+            {/* Draft status alert */}
+            {post && post.status !== 'publish' && (
+                <Alert 
+                    severity={post.status === 'draft' ? 'warning' : 'info'} 
+                    sx={{ mb: 2, borderRadius: 2 }}
+                    icon={post.status === 'draft' ? <EditIcon /> : <VisibilityOffIcon />}
+                >
+                    <Typography variant="body2">
+                        <strong>
+                            {post.status === 'draft' && 'Draft Post'}
+                            {post.status === 'private' && 'Private Post'}
+                            {post.status === 'pending' && 'Pending Review'}
+                            {post.status === 'future' && 'Scheduled Post'}
+                        </strong>
+                        {' - '}
+                        {post.status === 'draft' && 'This post is not published yet and only visible to authenticated users.'}
+                        {post.status === 'private' && 'This post is private and only visible to authenticated users.'}
+                        {post.status === 'pending' && 'This post is awaiting review before publication.'}
+                        {post.status === 'future' && 'This post is scheduled for future publication.'}
+                    </Typography>
+                </Alert>
+            )}
+
             <Paper sx={{ p: { xs: 2, md: 4 }, mb: 4, borderRadius: 2 }}>
                 {/* Post header */}
                 <Box sx={{ mb: 3 }}>
                     {/* Categories and Tags in a single row */}
                     <Box sx={{ mb: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                        {/* Post Status Chip */}
+                        {post.status !== 'publish' && (
+                            <Chip
+                                icon={post.status === 'draft' ? <EditIcon fontSize="small" /> : <VisibilityOffIcon fontSize="small" />}
+                                label={
+                                    post.status === 'draft' ? 'Draft' :
+                                    post.status === 'private' ? 'Private' :
+                                    post.status === 'pending' ? 'Pending Review' :
+                                    post.status === 'future' ? 'Scheduled' : 
+                                    'Published'
+                                }
+                                size="small"
+                                color={
+                                    post.status === 'draft' ? 'warning' :
+                                    post.status === 'private' ? 'error' :
+                                    post.status === 'pending' ? 'info' :
+                                    'secondary'
+                                }
+                                sx={{ 
+                                    borderRadius: 1,
+                                    fontWeight: 'bold',
+                                    mr: 1
+                                }}
+                            />
+                        )}
+                        
                         {/* Categories */}
                         {categories.map((category: any) => (
                             <Chip
@@ -194,6 +246,10 @@ const PostDetail: React.FC = () => {
                         variant="h3" 
                         component="h1" 
                         gutterBottom
+                        sx={{
+                            fontStyle: post.status === 'draft' ? 'italic' : 'normal',
+                            color: post.status === 'draft' ? 'text.secondary' : 'text.primary'
+                        }}
                         dangerouslySetInnerHTML={{ __html: title }}
                     />
 
@@ -210,6 +266,10 @@ const PostDetail: React.FC = () => {
                                     <Typography variant="subtitle2">{authorName}</Typography>
                                     <Typography variant="body2" color="text.secondary">
                                         {date}
+                                        {post.status === 'draft' && ' (Draft)'}
+                                        {post.status === 'private' && ' (Private)'}
+                                        {post.status === 'pending' && ' (Pending Review)'}
+                                        {post.status === 'future' && ' (Scheduled)'}
                                     </Typography>
                                 </Box>
                             </Box>

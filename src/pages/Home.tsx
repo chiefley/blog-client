@@ -4,6 +4,7 @@ import PostList from '../components/posts/PostList';
 import FeaturedArticle from '../components/posts/FeaturedArticle';
 import { WordPressPost } from '../types/interfaces';
 import { getPosts } from '../services/wordpressApi';
+import { useAuth } from '../contexts/AuthContext';
 
 const Home = () => {
   const [posts, setPosts] = useState<WordPressPost[]>([]);
@@ -12,14 +13,18 @@ const Home = () => {
   const [error, setError] = useState<string | null>(null);
   const [totalPages, setTotalPages] = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
+  
+  // Get authentication status
+  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
     const fetchPosts = async () => {
       try {
-        // Use the API service with authentication
+        // Use the API service with authentication and include drafts if authenticated
         const result = await getPosts({
           page: currentPage,
-          perPage: 10
+          perPage: 10,
+          includeDrafts: isAuthenticated // Include drafts when user is authenticated
         });
         
         // Set the featured post to the first post if on the first page
@@ -43,7 +48,7 @@ const Home = () => {
     setIsLoading(true);
     setError(null);
     fetchPosts();
-  }, [currentPage]);
+  }, [currentPage, isAuthenticated]); // Re-fetch when authentication status changes
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -72,6 +77,15 @@ const Home = () => {
 
   return (
     <Container maxWidth="lg">
+      {/* Authentication status indicator */}
+      {isAuthenticated && (
+        <Box sx={{ mb: 2 }}>
+          <Alert severity="info" sx={{ borderRadius: 2 }}>
+            📝 Draft mode active - You can see draft posts and unpublished content
+          </Alert>
+        </Box>
+      )}
+
       {/* Featured Post Section */}
       {featuredPost && (
         <Box sx={{ my: 4 }}>
@@ -83,6 +97,11 @@ const Home = () => {
       <Box sx={{ my: 4 }}>
         <Typography variant="h4" component="h1" gutterBottom>
           Latest Posts
+          {isAuthenticated && (
+            <Typography component="span" variant="subtitle1" sx={{ ml: 2, color: 'text.secondary' }}>
+              (including drafts)
+            </Typography>
+          )}
         </Typography>
         <Divider sx={{ mb: 3 }} />
         <PostList 

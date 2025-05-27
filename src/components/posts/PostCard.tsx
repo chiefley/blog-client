@@ -11,7 +11,7 @@ const PostCard = ({ post }: PostCardProps) => {
     // First check if better_featured_image is available from the Better REST API Featured Image plugin
     if (post.better_featured_image) {
       // Try to get medium size if available
-      if (post.better_featured_image.media_details?.sizes?.medium) {
+      if (post.better_featured_image.media_details.sizes.medium) {
         return post.better_featured_image.media_details.sizes.medium.source_url;
       }
       
@@ -25,11 +25,11 @@ const PostCard = ({ post }: PostCardProps) => {
     }
     
     // Fall back to the embedded media if available
-    if (post._embedded && post._embedded['wp:featuredmedia'] && post._embedded['wp:featuredmedia'][0]) {
+    if (post._embedded?.['wp:featuredmedia']?.[0]) {
       const media = post._embedded['wp:featuredmedia'][0];
       
       // Try to get medium size first
-      if (media.media_details && media.media_details.sizes && media.media_details.sizes.medium) {
+      if (media.media_details?.sizes?.medium) {
         return media.media_details.sizes.medium.source_url;
       }
       
@@ -43,10 +43,10 @@ const PostCard = ({ post }: PostCardProps) => {
   
   // Get author information
   const getAuthor = () => {
-    if (post._embedded && post._embedded.author && post._embedded.author[0]) {
+    if (post._embedded?.author?.[0]) {
       return {
         name: post._embedded.author[0].name || 'Unknown',
-        avatar: post._embedded.author[0].avatar_urls && post._embedded.author[0].avatar_urls['48'] 
+        avatar: post._embedded.author[0].avatar_urls?.['48'] 
           ? post._embedded.author[0].avatar_urls['48'] 
           : 'https://via.placeholder.com/48'
       };
@@ -58,9 +58,7 @@ const PostCard = ({ post }: PostCardProps) => {
   // Get categories
   const getCategories = (): Category[] => {
     if (
-      post._embedded && 
-      post._embedded['wp:term'] && 
-      post._embedded['wp:term'][0]
+      post._embedded?.['wp:term']?.[0]
     ) {
       return post._embedded['wp:term'][0] as Category[];
     }
@@ -70,9 +68,7 @@ const PostCard = ({ post }: PostCardProps) => {
   // Get tags
   const getTags = (): Tag[] => {
     if (
-      post._embedded && 
-      post._embedded['wp:term'] && 
-      post._embedded['wp:term'][1]
+      post._embedded?.['wp:term']?.[1]
     ) {
       return post._embedded['wp:term'][1] as Tag[];
     }

@@ -12,6 +12,7 @@ export interface WordPressPost {
     protected: boolean;
   };
   date: string;
+  status: 'publish' | 'draft' | 'private' | 'pending' | 'future'; // Add post status
   // Field from Better REST API Featured Image plugin
   featured_media_url?: string;
   // Alternative field provided by Better REST API Featured Image plugin
@@ -59,13 +60,11 @@ export interface WordPressPost {
     source_url: string;
   };
   _embedded?: {
-    author?: Array<{
+    author?: {
       name?: string;
-      avatar_urls?: {
-        [key: string]: string;
-      };
-    }>;
-    'wp:featuredmedia'?: Array<{
+      avatar_urls?: Record<string, string>;
+    }[];
+    'wp:featuredmedia'?: {
       source_url?: string;
       media_details?: {
         sizes?: {
@@ -74,9 +73,9 @@ export interface WordPressPost {
           };
         };
       };
-    }>;
+    }[];
     // Add wp:term for categories and tags
-    'wp:term'?: Array<Array<Category | Tag>>;
+    'wp:term'?: (Category | Tag)[][];
   };
   link: string;
   slug: string;
@@ -148,9 +147,7 @@ export interface Comment {
   author: number;
   author_name: string;
   author_url: string;
-  author_avatar_urls?: {
-    [key: string]: string;
-  };
+  author_avatar_urls?: Record<string, string>;
   date: string;
   content: {
     rendered: string;
