@@ -5,6 +5,7 @@ import { Box, Container, CssBaseline, Grid, useMediaQuery, useTheme, CircularPro
 import { Header, Sidebar } from './components/layout';
 import Footer from './components/layout/Footer';
 import { SiteInfoProvider } from './contexts/SiteInfoContext';
+import { AuthProvider } from './contexts/AuthContext';
 
 // Lazy load pages instead of importing them directly
 const Home = lazy(() => import('./pages/Home'));
@@ -38,60 +39,62 @@ const App: React.FC = () => {
 
   return (
     <Router>
-      <SiteInfoProvider>
-        <CssBaseline />
-        <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-          <Header onMenuClick={toggleSidebar} sidebarOpen={sidebarOpen} />
+      <AuthProvider>
+        <SiteInfoProvider>
+          <CssBaseline />
+          <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+            <Header onMenuClick={toggleSidebar} sidebarOpen={sidebarOpen} />
 
-          <Box component="main" sx={{ flexGrow: 1, py: 3 }}>
-            <Container maxWidth="lg">
-              <Grid container spacing={3}>
-                {/* Sidebar - Hidden on mobile unless opened */}
-                <Grid
-                  item
-                  xs={12}
-                  md={3}
-                  sx={{
-                    display: isMobile ? (sidebarOpen ? 'block' : 'none') : 'block',
-                    position: isMobile ? 'fixed' : 'static',
-                    top: isMobile ? 64 : 'auto',
-                    left: 0,
-                    width: isMobile ? '85%' : 'auto',
-                    maxWidth: isMobile ? '300px' : 'none',
-                    bottom: 0,
-                    zIndex: 100,
-                    overflowY: 'auto',
-                    padding: isMobile ? 2 : 'inherit',
-                    backgroundColor: 'background.paper',
-                    height: isMobile ? 'calc(100% - 64px)' : 'auto',
-                    boxShadow: isMobile ? 3 : 0
-                  }}
-                >
-                  <Sidebar />
-                </Grid>
+            <Box component="main" sx={{ flexGrow: 1, py: 3 }}>
+              <Container maxWidth="lg">
+                <Grid container spacing={3}>
+                  {/* Sidebar - Hidden on mobile unless opened */}
+                  <Grid
+                    item
+                    xs={12}
+                    md={3}
+                    sx={{
+                      display: isMobile ? (sidebarOpen ? 'block' : 'none') : 'block',
+                      position: isMobile ? 'fixed' : 'static',
+                      top: isMobile ? 64 : 'auto',
+                      left: 0,
+                      width: isMobile ? '85%' : 'auto',
+                      maxWidth: isMobile ? '300px' : 'none',
+                      bottom: 0,
+                      zIndex: 100,
+                      overflowY: 'auto',
+                      padding: isMobile ? 2 : 'inherit',
+                      backgroundColor: 'background.paper',
+                      height: isMobile ? 'calc(100% - 64px)' : 'auto',
+                      boxShadow: isMobile ? 3 : 0
+                    }}
+                  >
+                    <Sidebar />
+                  </Grid>
 
-                {/* Main Content - Now wrapped in Suspense for lazy loading */}
-                <Grid item xs={12} md={isMobile ? 12 : 9}>
-                  <Suspense fallback={<PageLoader />}>
-                    <Routes>
-                      <Route path="/" element={<Home />} />
-                      <Route path="/posts/category/:slug" element={<CategoryPosts />} />
-                      <Route path="/posts/tag/:slug" element={<TagPosts />} />
-                      <Route path="/post/:slug" element={<PostDetail />} />
-                      {/* Add the new route for the genetic algorithm blog post */}
-                      <Route path="/post/genetic-algorithm-with-weasels" element={<GeneticAlgorithmPost />} />
-                      {/* Add a fallback route that redirects to home */}
-                      <Route path="*" element={<Home />} />
-                    </Routes>
-                  </Suspense>
+                  {/* Main Content - Now wrapped in Suspense for lazy loading */}
+                  <Grid item xs={12} md={isMobile ? 12 : 9}>
+                    <Suspense fallback={<PageLoader />}>
+                      <Routes>
+                        <Route path="/" element={<Home />} />
+                        <Route path="/posts/category/:slug" element={<CategoryPosts />} />
+                        <Route path="/posts/tag/:slug" element={<TagPosts />} />
+                        <Route path="/post/:slug" element={<PostDetail />} />
+                        {/* Add the new route for the genetic algorithm blog post */}
+                        <Route path="/post/genetic-algorithm-with-weasels" element={<GeneticAlgorithmPost />} />
+                        {/* Add a fallback route that redirects to home */}
+                        <Route path="*" element={<Home />} />
+                      </Routes>
+                    </Suspense>
+                  </Grid>
                 </Grid>
-              </Grid>
-            </Container>
+              </Container>
+            </Box>
+
+            <Footer />
           </Box>
-
-          <Footer />
-        </Box>
-      </SiteInfoProvider>
+        </SiteInfoProvider>
+      </AuthProvider>
     </Router>
   );
 };
