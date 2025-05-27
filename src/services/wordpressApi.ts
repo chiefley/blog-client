@@ -265,7 +265,7 @@ export const getPosts = async (options: {
     // If we have a slug instead of an ID, we need to first find the category ID
     try {
       const categories = await getCategories();
-      const category = categories.find(cat => cat.slug === categorySlug);
+      const category = categories.find((cat: Category) => cat.slug === categorySlug);
       if (category) {
         params.append('categories', category.id.toString());
       }
@@ -307,6 +307,7 @@ export const getPosts = async (options: {
       status: response.status,
       authenticated: userIsAuthenticated,
       includeDrafts: includeDrafts,
+      contentType: response.headers.get('Content-Type'),
       headers: {
         'X-WP-Total': response.headers.get('X-WP-Total'),
         'X-WP-TotalPages': response.headers.get('X-WP-TotalPages')
@@ -320,6 +321,7 @@ export const getPosts = async (options: {
       try {
         const errorData = await response.text();
         errorDetails = errorData.substring(0, 200); // First 200 chars for brevity
+        console.error('API Error Response:', errorDetails);
       } catch (e) {
         // Ignore if we can't get error details
       }
@@ -327,8 +329,42 @@ export const getPosts = async (options: {
       throw new Error(`API request failed with status ${response.status}: ${errorDetails}`);
     }
     
-    const posts = await response.json();
+    // Parse the response
+    let responseData;
+    try {
+      responseData = await response.json();
+    } catch (parseError) {
+      console.error('Error parsing JSON response:', parseError);
+      throw new Error('Invalid JSON response from API');
+    }
+
+    // Validate that we received an array
+    if (!Array.isArray(responseData)) {
+      console.error('API returned non-array response:', responseData);
+      
+      // Check if it's an error object
+      if (responseData && typeof responseData === 'object') {
+        if (responseData.code && responseData.message) {
+          throw new Error(`WordPress API Error: ${responseData.message} (${responseData.code})`);
+        }
+        if (responseData.error) {
+          throw new Error(`API Error: ${responseData.error}`);
+        }
+      }
+      
+      throw new Error('API returned unexpected response format (expected array of posts)');
+    }
+
+    const posts = responseData;
     const totalPages = parseInt(response.headers.get('X-WP-TotalPages') || '1', 10);
+    
+    // Validate that posts array contains valid post objects
+    if (posts.length > 0) {
+      const firstPost = posts[0];
+      if (!firstPost.id || !firstPost.title) {
+        console.warn('Posts array contains invalid post objects:', firstPost);
+      }
+    }
     
     // Log draft posts found
     const draftPosts = posts.filter((post: WordPressPost) => post.status === 'draft');
@@ -340,6 +376,8 @@ export const getPosts = async (options: {
     return { posts, totalPages };
   } catch (error) {
     console.error('Error fetching posts:', error);
+    
+    // Return empty result instead of letting the error propagate to the filter function
     return { posts: [], totalPages: 0 };
   }
 };

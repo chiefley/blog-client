@@ -15,10 +15,26 @@ const Home = () => {
   const [currentPage, setCurrentPage] = useState(1);
   
   // Get authentication status
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
 
   useEffect(() => {
     const fetchPosts = async () => {
+      // Don't fetch posts while auth is still loading
+      if (authLoading) {
+        console.log('⏳ Waiting for auth to initialize before fetching posts...');
+        return;
+      }
+
+      console.log('🏠 Home: Fetching posts...', {
+        isAuthenticated,
+        authLoading,
+        currentPage,
+        includeDrafts: isAuthenticated
+      });
+
+      setIsLoading(true);
+      setError(null);
+
       try {
         // Use the API service with authentication and include drafts if authenticated
         const result = await getPosts({
@@ -27,39 +43,71 @@ const Home = () => {
           includeDrafts: isAuthenticated // Include drafts when user is authenticated
         });
         
+        console.log('🏠 Home: Received posts result:', {
+          postsCount: result.posts.length,
+          totalPages: result.totalPages,
+          isAuthenticated
+        });
+
+        // Validate the result
+        if (!result || !Array.isArray(result.posts)) {
+          throw new Error('Invalid response from getPosts');
+        }
+        
         // Set the featured post to the first post if on the first page
         if (currentPage === 1 && result.posts.length > 0) {
           setFeaturedPost(result.posts[0]);
           // Remove the featured post from the regular post list
           setPosts(result.posts.slice(1));
         } else {
+          setFeaturedPost(null);
           setPosts(result.posts);
         }
         
         setTotalPages(result.totalPages);
         setIsLoading(false);
       } catch (err) {
-        console.error('Error fetching posts:', err);
-        setError('Failed to load posts. Please try again later.');
+        console.error('🏠 Home: Error fetching posts:', err);
+        const errorMessage = err instanceof Error ? err.message : 'Failed to load posts. Please try again later.';
+        setError(errorMessage);
         setIsLoading(false);
+        
+        // Reset posts to empty arrays to prevent filter errors
+        setPosts([]);
+        setFeaturedPost(null);
       }
     };
 
-    setIsLoading(true);
-    setError(null);
     fetchPosts();
-  }, [currentPage, isAuthenticated]); // Re-fetch when authentication status changes
+  }, [currentPage, isAuthenticated, authLoading]); // Include authLoading in dependencies
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
     window.scrollTo(0, 0);
   };
 
+  // Show loading while auth is initializing
+  if (authLoading) {
+    return (
+      <Container maxWidth="lg">
+        <Box sx={{ textAlign: 'center', p: 4 }}>
+          <CircularProgress />
+          <Typography variant="body2" sx={{ mt: 2 }}>
+            Initializing...
+          </Typography>
+        </Box>
+      </Container>
+    );
+  }
+
   if (isLoading) {
     return (
       <Container maxWidth="lg">
         <Box sx={{ textAlign: 'center', p: 4 }}>
           <CircularProgress />
+          <Typography variant="body2" sx={{ mt: 2 }}>
+            Loading posts...
+          </Typography>
         </Box>
       </Container>
     );
@@ -69,7 +117,12 @@ const Home = () => {
     return (
       <Container maxWidth="lg">
         <Box sx={{ p: 4 }}>
-          <Alert severity="error">{error}</Alert>
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+          <Typography variant="body2" color="text.secondary">
+            Debug info: isAuthenticated={isAuthenticated.toString()}, authLoading={authLoading.toString()}
+          </Typography>
         </Box>
       </Container>
     );
@@ -104,12 +157,20 @@ const Home = () => {
           )}
         </Typography>
         <Divider sx={{ mb: 3 }} />
-        <PostList 
-          posts={posts} 
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={handlePageChange}
-        />
+        
+        {posts.length === 0 ? (
+          <Alert severity="info">
+            No posts available at the moment.
+            {isAuthenticated && " (This includes checking for drafts)"}
+          </Alert>
+        ) : (
+          <PostList 
+            posts={posts} 
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+          />
+        )}
       </Box>
     </Container>
   );

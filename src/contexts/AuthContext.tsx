@@ -44,6 +44,10 @@ const STORAGE_KEYS = {
   USER: 'wp_auth_user'
 };
 
+// Global variables to track auth state for immediate access
+let globalCredentials: { username: string; password: string } | null = null;
+let globalAuthInitialized = false;
+
 // Auth provider component
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
@@ -135,9 +139,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.removeItem(STORAGE_KEYS.USERNAME);
       localStorage.removeItem(STORAGE_KEYS.PASSWORD);
       localStorage.removeItem(STORAGE_KEYS.USER);
+      // Clear global state
+      globalCredentials = null;
     } catch (error) {
       console.error('Error clearing credentials from localStorage:', error);
     }
+  };
+
+  /**
+   * Update global credentials state
+   */
+  const updateGlobalCredentials = (username: string | null, password: string | null) => {
+    if (username && password) {
+      globalCredentials = { username, password };
+    } else {
+      globalCredentials = null;
+    }
+    globalAuthInitialized = true;
   };
 
   /**
@@ -155,6 +173,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setCredentials({ username, password });
         setUser(userData);
         setIsAuthenticated(true);
+        
+        // Update global state immediately
+        updateGlobalCredentials(username, password);
         
         // Save to localStorage for persistence
         saveCredentials(username, password, userData);
@@ -182,6 +203,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setIsAuthenticated(false);
     setUser(null);
     setError(null);
+    updateGlobalCredentials(null, null);
     clearStoredCredentials();
   };
 
@@ -200,13 +222,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
    */
   useEffect(() => {
     const initializeAuth = async () => {
+      console.log('🔐 Initializing authentication...');
       const storedCredentials = loadCredentials();
       
       if (storedCredentials) {
+        console.log('🔐 Found stored credentials, validating...');
+        // Update global state immediately with stored credentials
+        updateGlobalCredentials(storedCredentials.username, storedCredentials.password);
+        
         // Validate stored credentials
         const userData = await validateCredentials(storedCredentials.username, storedCredentials.password);
         
         if (userData) {
+          console.log('🔐 Stored credentials are valid');
           setCredentials({ 
             username: storedCredentials.username, 
             password: storedCredentials.password 
@@ -214,11 +242,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setUser(userData);
           setIsAuthenticated(true);
         } else {
+          console.log('🔐 Stored credentials are invalid, clearing...');
           // Stored credentials are invalid, clear them
           clearStoredCredentials();
+          updateGlobalCredentials(null, null);
         }
+      } else {
+        console.log('🔐 No stored credentials found');
+        updateGlobalCredentials(null, null);
       }
       
+      console.log('🔐 Authentication initialization complete');
       setIsLoading(false);
     };
 
@@ -254,31 +288,44 @@ export const useAuth = (): AuthContextType => {
 
 /**
  * Helper function to create auth header - exported for backward compatibility
- * This now checks for stored credentials as well
+ * This now uses global state for immediate access during initialization
  */
 export const createAuthHeader = (): { Authorization: string } | {} => {
-  // First try to get credentials from localStorage
-  try {
-    const username = localStorage.getItem(STORAGE_KEYS.USERNAME);
-    const password = localStorage.getItem(STORAGE_KEYS.PASSWORD);
-    
-    if (username && password) {
-      const credentials = btoa(`${username}:${password}`);
-      return { Authorization: `Basic ${credentials}` };
-    }
-  } catch (error) {
-    console.error('Error reading stored credentials:', error);
+  // Use global credentials if available (immediate access)
+  if (globalCredentials) {
+    console.log('🔐 Using global credentials for auth header');
+    const credentials = btoa(`${globalCredentials.username}:${globalCredentials.password}`);
+    return { Authorization: `Basic ${credentials}` };
   }
   
-  // Fallback to environment variables
+  // During initialization, try to read from localStorage directly
+  if (!globalAuthInitialized) {
+    console.log('🔐 Auth not initialized yet, trying localStorage...');
+    try {
+      const username = localStorage.getItem(STORAGE_KEYS.USERNAME);
+      const password = localStorage.getItem(STORAGE_KEYS.PASSWORD);
+      
+      if (username && password) {
+        console.log('🔐 Using localStorage credentials for auth header');
+        const credentials = btoa(`${username}:${password}`);
+        return { Authorization: `Basic ${credentials}` };
+      }
+    } catch (error) {
+      console.error('Error reading stored credentials during initialization:', error);
+    }
+  }
+  
+  // Fallback to environment variables (development/testing)
   const username = import.meta.env.VITE_WP_APP_USERNAME;
   const password = import.meta.env.VITE_WP_APP_PASSWORD;
   
   if (username && password) {
+    console.log('🔐 Using environment credentials for auth header');
     const credentials = btoa(`${username}:${password}`);
     return { Authorization: `Basic ${credentials}` };
   }
   
+  console.log('🔐 No auth credentials available');
   return {};
 };
 
