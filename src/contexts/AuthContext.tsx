@@ -78,11 +78,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (response.ok) {
         const userData = await response.json();
+        console.log('User data received:', userData); // Debug log
         return {
           id: userData.id || 0,
           username: userData.username || username,
           email: userData.email || '',
-          name: userData.name || username
+          name: userData.name || userData.display_name || username
         };
       } else {
         console.error('Credential validation failed:', response.status, response.statusText);
@@ -150,6 +151,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const userData = await validateCredentials(username, password);
       
       if (userData) {
+        console.log('Login successful, setting user:', userData); // Debug log
         setCredentials({ username, password });
         setUser(userData);
         setIsAuthenticated(true);

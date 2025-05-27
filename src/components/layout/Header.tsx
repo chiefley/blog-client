@@ -35,6 +35,9 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, sidebarOpen }) => {
   const { siteInfo, loading } = useSiteInfo();
   const { user, isAuthenticated, logout } = useAuth();
   
+  // Debug logging
+  console.log('Header render - isAuthenticated:', isAuthenticated, 'user:', user);
+  
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [loginModalOpen, setLoginModalOpen] = useState<boolean>(false);
   const userMenuOpen = Boolean(anchorEl);
