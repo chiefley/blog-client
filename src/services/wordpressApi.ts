@@ -239,7 +239,7 @@ export const getSiteInfo = async (): Promise<SiteInfo> => {
 };
 
 /**
- * Get posts with optional filtering - now includes draft support
+ * Get posts with optional filtering - simplified approach without status parameter
  */
 export const getPosts = async (options: {
   page?: number;
@@ -278,13 +278,17 @@ export const getPosts = async (options: {
     params.append('search', search);
   }
 
-  // Include drafts if user is authenticated and includeDrafts is true
+  // Check authentication status
   const userIsAuthenticated = isAuthenticated();
+  
+  // Simplified approach: Don't specify status parameter at all when authenticated and wanting drafts
+  // Let WordPress return what it's allowed to return based on user permissions
   if (includeDrafts && userIsAuthenticated) {
-    params.append('status', 'publish,draft');
-    console.log('🔍 Including draft posts in request (user is authenticated)');
-  } else if (includeDrafts && !userIsAuthenticated) {
-    console.log('⚠️ Draft posts requested but user is not authenticated, showing published only');
+    console.log('🔍 Making authenticated request without status parameter - letting WordPress decide what posts to return');
+  } else {
+    // Only specify published status when we explicitly don't want drafts or user isn't authenticated
+    params.append('status', 'publish');
+    console.log('📖 Requesting only published posts');
   }
 
   const apiUrl = getApiUrl();
@@ -366,13 +370,17 @@ export const getPosts = async (options: {
       }
     }
     
-    // Log draft posts found
+    // Log what types of posts we received
     const draftPosts = posts.filter((post: WordPressPost) => post.status === 'draft');
+    const publishedPosts = posts.filter((post: WordPressPost) => post.status === 'publish');
+    const otherPosts = posts.filter((post: WordPressPost) => post.status !== 'draft' && post.status !== 'publish');
+    
+    console.log(`📊 Posts received: ${posts.length} total (${publishedPosts.length} published, ${draftPosts.length} drafts, ${otherPosts.length} other)`);
+    
     if (draftPosts.length > 0) {
-      console.log(`📝 Found ${draftPosts.length} draft posts in response`);
+      console.log('📝 Draft posts found:', draftPosts.map(p => p.title.rendered));
     }
     
-    console.log(`Successfully fetched ${posts.length} posts (${draftPosts.length} drafts), total pages: ${totalPages}`);
     return { posts, totalPages };
   } catch (error) {
     console.error('Error fetching posts:', error);
@@ -383,18 +391,23 @@ export const getPosts = async (options: {
 };
 
 /**
- * Get a single post by slug - now includes draft support
+ * Get a single post by slug - simplified approach without status parameter
  */
 export const getPostBySlug = async (slug: string, includeDrafts = false): Promise<WordPressPost | null> => {
   const params = new URLSearchParams();
   params.append('slug', slug);
   params.append('_embed', 'author,wp:featuredmedia,wp:term');
 
-  // Include drafts if user is authenticated and includeDrafts is true
+  // Check authentication status  
   const userIsAuthenticated = isAuthenticated();
+  
+  // Simplified approach: Don't specify status parameter when authenticated and wanting drafts
   if (includeDrafts && userIsAuthenticated) {
-    params.append('status', 'publish,draft');
-    console.log('🔍 Including draft posts in single post request');
+    console.log('🔍 Searching for post without status parameter - letting WordPress decide what to return');
+  } else {
+    // Only specify published status when we explicitly don't want drafts or user isn't authenticated
+    params.append('status', 'publish');
+    console.log('📖 Searching only published posts');
   }
 
   const apiUrl = getApiUrl();
@@ -404,7 +417,6 @@ export const getPostBySlug = async (slug: string, includeDrafts = false): Promis
     // Create request options with auth if user is authenticated
     const requestOptions = createRequestOptions(userIsAuthenticated);
 
-    // For debugging - log the request
     console.log('Fetching post by slug:', slug);
     console.log('Request URL:', requestUrl);
     console.log('Include drafts:', includeDrafts);
@@ -412,7 +424,6 @@ export const getPostBySlug = async (slug: string, includeDrafts = false): Promis
 
     const response = await fetch(requestUrl, requestOptions);
     
-    // Log response details for debugging
     console.log(`Post by Slug API Response [${response.status}]:`, {
       slug,
       url: requestUrl,
@@ -422,25 +433,28 @@ export const getPostBySlug = async (slug: string, includeDrafts = false): Promis
     });
     
     if (!response.ok) {
-      // Try to get more information about the error
       let errorDetails = '';
       try {
         const errorData = await response.text();
-        errorDetails = errorData.substring(0, 200); // First 200 chars for brevity
+        errorDetails = errorData.substring(0, 200);
       } catch (e) {
         // Ignore if we can't get error details
       }
-      
       throw new Error(`API request failed with status ${response.status}: ${errorDetails}`);
     }
     
     const posts = await response.json();
     
     // The API returns an array, but we only want the first post with this slug
-    const post = posts.length > 0 ? posts[0] : null;
+    const post = Array.isArray(posts) && posts.length > 0 ? posts[0] : null;
     
-    if (post && post.status === 'draft') {
-      console.log(`📝 Retrieved draft post: "${post.title.rendered}"`);
+    if (post) {
+      console.log(`✅ Found post: "${post.title.rendered}" (status: ${post.status})`);
+      if (post.status === 'draft') {
+        console.log(`📝 Retrieved draft post`);
+      }
+    } else {
+      console.log(`❌ Post with slug "${slug}" not found`);
     }
     
     return post;
