@@ -69,19 +69,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const apiUrl = getRootApiUrl();
       
-      // Call JWT auth endpoint to get token
-      const response = await fetch(`${apiUrl}/jwt-auth/v1/token`, {
+      // Call JWT auth endpoint to get token - using the correct endpoint and format
+      const response = await fetch(`${apiUrl}/api/v1/token`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/x-www-form-urlencoded'
         },
-        body: JSON.stringify({ username, password })
+        body: new URLSearchParams({
+          username,
+          password
+        })
       });
 
       if (response.ok) {
         const data = await response.json();
         console.log('JWT token received'); // Debug log
-        return data.token;
+        return data.jwt_token; // Changed from data.token to data.jwt_token
       } else {
         console.error('JWT authentication failed:', response.status, response.statusText);
         const errorData = await response.json().catch(() => null);

@@ -650,6 +650,63 @@ export const getPostBySlug = async (slug: string, includeDrafts = false): Promis
 };
 
 /**
+ * Get a single post by ID - useful for drafts that don't have slugs
+ */
+export const getPostById = async (id: number, includeDrafts = false): Promise<WordPressPost | null> => {
+  const apiUrl = getApiUrl();
+  
+  // Check authentication status  
+  const userIsAuthenticated = isAuthenticated();
+  
+  // Create request options with auth if user is authenticated
+  const requestOptions = createRequestOptions(userIsAuthenticated);
+  
+  try {
+    console.log(`Fetching post by ID: ${id}`);
+    
+    // WordPress REST API allows fetching by ID directly
+    const requestUrl = `${apiUrl}/posts/${id}?_embed=author,wp:featuredmedia,wp:term`;
+    
+    const response = await fetch(requestUrl, requestOptions);
+    
+    console.log(`Post by ID API Response [${response.status}]:`, {
+      id,
+      url: requestUrl,
+      status: response.status,
+      authenticated: userIsAuthenticated
+    });
+    
+    if (!response.ok) {
+      // If we get a 401/403 and we're trying to get a draft, it's likely a permissions issue
+      if ((response.status === 401 || response.status === 403) && includeDrafts) {
+        console.log('📝 Access denied to draft post - user may not have permission');
+      }
+      
+      let errorDetails = '';
+      try {
+        const errorData = await response.text();
+        errorDetails = errorData.substring(0, 200);
+      } catch (e) {
+        // Ignore if we can't get error details
+      }
+      
+      throw new Error(`API request failed with status ${response.status}: ${errorDetails}`);
+    }
+    
+    const post = await response.json();
+    
+    if (post) {
+      console.log(`✅ Found post by ID: "${post.title.rendered}" (status: ${post.status})`);
+    }
+    
+    return post;
+  } catch (error) {
+    console.error('Error fetching post by ID:', error);
+    return null;
+  }
+};
+
+/**
  * Get categories
  */
 export const getCategories = async (): Promise<Category[]> => {

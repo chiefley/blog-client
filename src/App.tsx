@@ -80,6 +80,8 @@ const App: React.FC = () => {
                         <Route path="/posts/category/:slug" element={<CategoryPosts />} />
                         <Route path="/posts/tag/:slug" element={<TagPosts />} />
                         <Route path="/post/:slug" element={<PostDetail />} />
+                        {/* Route for posts by ID (useful for drafts without slugs) */}
+                        <Route path="/post/id/:id" element={<PostDetail />} />
                         {/* Add the new route for the genetic algorithm blog post */}
                         <Route path="/post/genetic-algorithm-with-weasels" element={<GeneticAlgorithmPost />} />
                         {/* Add a fallback route that redirects to home */}

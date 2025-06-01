@@ -20,6 +20,11 @@ const HeaderLabel = styled(Box)(({ theme }) => ({
 }));
 
 const FeaturedArticle: React.FC<FeaturedArticleProps> = ({ post }) => {
+  // Check if post has a valid slug (drafts might not have slugs)
+  const hasValidSlug = post.slug && post.slug.trim() !== '';
+  // Use slug for published posts, ID for drafts without slugs
+  const postLink = hasValidSlug ? `/post/${post.slug}` : `/post/id/${post.id}`;
+  
   // Get the featured image URL if available, or use a default
   const getFeaturedImage = () => {
     // First check if better_featured_image is available from the Better REST API Featured Image plugin
@@ -60,7 +65,7 @@ const FeaturedArticle: React.FC<FeaturedArticleProps> = ({ post }) => {
     }
     
     // Default image if none is available
-    return 'https://via.placeholder.com/1200x500';
+    return 'https://placehold.co/1200x500';
   };
   
   // Get categories for the post
@@ -144,12 +149,12 @@ const FeaturedArticle: React.FC<FeaturedArticleProps> = ({ post }) => {
         }}
       >
         <LazyImage 
-          src={responsiveImageUrl || 'https://via.placeholder.com/1200x500'}
+          src={responsiveImageUrl || 'https://placehold.co/1200x500'}
           alt={post.title.rendered}
           height="100%"
           width="100%"
           objectFit="cover"
-          fallbackSrc="https://via.placeholder.com/1200x500"
+          fallbackSrc="https://placehold.co/1200x500"
         />
       </Box>
 
@@ -239,22 +244,28 @@ const FeaturedArticle: React.FC<FeaturedArticleProps> = ({ post }) => {
         {/* Post title */}
         <Typography 
           variant="h4" 
-          component={RouterLink}
-          to={`/post/${post.slug}`}
+          component="h2"
           sx={{ 
-            color: 'white', 
-            textDecoration: 'none',
-            display: 'block',
             mb: 0.5,
-            textShadow: '1px 1px 3px rgba(0,0,0,0.6)',
-            '&:hover': {
-              color: 'primary.light'
-            },
             fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2rem' }, // Slightly smaller font sizes
             lineHeight: 1.2 // Tighter line height
           }}
-          dangerouslySetInnerHTML={{ __html: post.title.rendered }}
-        />
+        >
+          <Box
+            component={RouterLink}
+            to={postLink}
+            sx={{ 
+              color: 'white', 
+              textDecoration: 'none',
+              display: 'block',
+              textShadow: '1px 1px 3px rgba(0,0,0,0.6)',
+              '&:hover': {
+                color: 'primary.light'
+              }
+            }}
+            dangerouslySetInnerHTML={{ __html: post.title.rendered }}
+          />
+        </Typography>
         
         {/* Excerpt - added back with limited height */}
         <Box 
@@ -295,7 +306,7 @@ const FeaturedArticle: React.FC<FeaturedArticleProps> = ({ post }) => {
           <Button 
             variant="outlined"
             component={RouterLink}
-            to={`/post/${post.slug}`}
+            to={postLink}
             size="small" // Smaller button
             sx={{
               color: 'white',
