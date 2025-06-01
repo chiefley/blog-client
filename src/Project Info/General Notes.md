@@ -6,7 +6,7 @@
 # My Biography
 I am a 75 year old male, still working as a fulltime software architect on a contract basis.  I have been developing software for decades, most of it in backend architecture and DB Design.  I have been using .Net C# since verson Framework 1.1, Entity Framework, and SQL Server hosted in Azure.
 
-I have very little front-end experience except for Winforms and Blazor.  I have written a small amount of javascript, no Typescript, and very little CSS.   
+I have very little front-end experience except for Winforms and Blazor.  I have written a small amount of javascript, no Typescript, and very little CSS. So the goal is to develop the blog client using vibe coding with Claude.
 
 ## Technology Stack
 - Frontend: React with TypeScript and Material UI, Vite components
@@ -26,15 +26,15 @@ I have very little front-end experience except for Winforms and Blazor.  I have 
 ### Backend & Hosting
 - Wordpress Business plan at Hostinger.com to enable full REST API access
 - Currently hosted at https://wpcms.thechief.com.
-- WordPress multisite capability to support multiple blogs (domain1.com/blog1, domain2.com/blo2, etc.)
+- WordPress multisite capability to support multiple blogs (domain1.com/blog1, domain1.com/blo2, etc.)
 - WP is configured for three sites: wa1x, applefinch, and the default headless site for development.
 - WA1X is a ham radio blog.   Applefinch is a blog about science and the scientific method.
 - I am the only admin since all the blogs will be mine.
 - I will use the Wordpress Admin for all configuration and content management.
 
 ### Development Approach
-- Using Webstorm for development.
-- Using cmd window to run npm commands.
+- Using VS Code
+- Using Claude and Claude Code for vibe coding.
 - Creating discrete components and services using Vite components.
 - Leveraging TypeScript interfaces for WordPress API responses
 - Incremental development with component-based approach
@@ -43,7 +43,7 @@ I have very little front-end experience except for Winforms and Blazor.  I have 
 - Chats and resource under the XBlog project in Claude.ai
 - Chats usually are loaded with src folder from Git repository.
 - All client development is done by Claude.
-- All except trivial updates, I request the full updated file in artfact form.
+- All except trivial updates, I request the full updated file in artfact form.  Or Claude Code editing the file directly.
 
 ## Accomplished so far
 - Set up Visual Studio development environment. 

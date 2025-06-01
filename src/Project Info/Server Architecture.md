@@ -17,7 +17,7 @@
   - User Role Editor
   - WP REST Cache
   - WP-REST-API V2 Menus
-  - WordPress REST API Authentication (disabled for now)
+  - WordPress REST API Authentication configured for JWT Authentication.
   - Better REST API Featured Image (see development details below)
   - Max Mega Menu
   - Shortcodes Ultimate
