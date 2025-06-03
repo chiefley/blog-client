@@ -15,7 +15,7 @@ import {
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EditIcon from '@mui/icons-material/Edit';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
-import { getPostBySlug } from '../../services/wordpressApi';
+import { getPostBySlug, getPostById } from '../../services/wordpressApi';
 import { WordPressPost } from '../../types/interfaces';
 import LazyImage from '../common/LazyImage';
 import { getResponsiveImageUrl } from '../../utils/imageUtils';
@@ -23,21 +23,34 @@ import { Comments } from '../comments';
 import { parseEmbeddedComponents } from '../embedded/ComponentRegistry';
 
 const PostDetail: React.FC = () => {
-    const { slug } = useParams<{ slug: string }>();
+    const { slug, id } = useParams<{ slug?: string; id?: string }>();
     const [post, setPost] = useState<WordPressPost | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchPost = async () => {
-            if (!slug) return;
+            if (!slug && !id) return;
 
             setLoading(true);
             setError(null);
 
             try {
-                // Try to get post including drafts if user is authenticated
-                const postData = await getPostBySlug(slug, true);
+                let postData = null;
+                
+                if (id) {
+                    // Fetch by ID (for drafts without slugs)
+                    const postId = parseInt(id, 10);
+                    if (!isNaN(postId)) {
+                        postData = await getPostById(postId, true);
+                    } else {
+                        setError('Invalid post ID');
+                        return;
+                    }
+                } else if (slug) {
+                    // Fetch by slug (for published posts)
+                    postData = await getPostBySlug(slug, true);
+                }
                 
                 if (postData) {
                     setPost(postData);
@@ -53,7 +66,7 @@ const PostDetail: React.FC = () => {
         };
 
         fetchPost();
-    }, [slug]);
+    }, [slug, id]);
 
     if (loading) {
         return (
@@ -246,10 +259,6 @@ const PostDetail: React.FC = () => {
                         variant="h3" 
                         component="h1" 
                         gutterBottom
-                        sx={{
-                            fontStyle: post.status === 'draft' ? 'italic' : 'normal',
-                            color: post.status === 'draft' ? 'text.secondary' : 'text.primary'
-                        }}
                         dangerouslySetInnerHTML={{ __html: title }}
                     />
 
@@ -266,10 +275,6 @@ const PostDetail: React.FC = () => {
                                     <Typography variant="subtitle2">{authorName}</Typography>
                                     <Typography variant="body2" color="text.secondary">
                                         {date}
-                                        {post.status === 'draft' && ' (Draft)'}
-                                        {post.status === 'private' && ' (Private)'}
-                                        {post.status === 'pending' && ' (Pending Review)'}
-                                        {post.status === 'future' && ' (Scheduled)'}
                                     </Typography>
                                 </Box>
                             </Box>

@@ -10,9 +10,11 @@ import {
 import PostList from '../components/posts/PostList';
 import { WordPressPost } from '../types/interfaces';
 import { getPosts, getCategoryBySlug } from '../services/wordpressApi';
+import { useAuth } from '../contexts/AuthContext';
 
 const CategoryPosts = () => {
   const { slug } = useParams<{ slug: string }>();
+  const { isAuthenticated } = useAuth();
   const [posts, setPosts] = useState<WordPressPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +46,8 @@ const CategoryPosts = () => {
         const result = await getPosts({
           page: currentPage,
           perPage: 10,
-          categoryId: categoryData.id
+          categoryId: categoryData.id,
+          includeDrafts: isAuthenticated
         });
         
         setPosts(result.posts);
@@ -60,7 +63,7 @@ const CategoryPosts = () => {
     setLoading(true);
     setError(null);
     fetchCategoryPosts();
-  }, [slug, currentPage]);
+  }, [slug, currentPage, isAuthenticated]);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);

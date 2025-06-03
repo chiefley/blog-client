@@ -39,13 +39,12 @@ interface AuthProviderProps {
 
 // Storage keys
 const STORAGE_KEYS = {
-  USERNAME: 'wp_auth_username',
-  PASSWORD: 'wp_auth_password',
+  JWT_TOKEN: 'wp_auth_jwt_token',
   USER: 'wp_auth_user'
 };
 
 // Global variables to track auth state for immediate access
-let globalCredentials: { username: string; password: string } | null = null;
+let globalJwtToken: string | null = null;
 let globalAuthInitialized = false;
 
 // Auth provider component
@@ -54,25 +53,61 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState<boolean>(true); // Start as loading to check stored credentials
   const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [credentials, setCredentials] = useState<{ username: string; password: string } | null>(null);
+  const [jwtToken, setJwtToken] = useState<string | null>(null);
 
   /**
-   * Create Basic Auth header from credentials
+   * Create JWT Auth header from token
    */
-  const createBasicAuthHeader = (username: string, password: string): { Authorization: string } => {
-    const credentials = btoa(`${username}:${password}`);
-    return { Authorization: `Basic ${credentials}` };
+  const createJwtAuthHeader = (token: string): { Authorization: string } => {
+    return { Authorization: `Bearer ${token}` };
   };
 
   /**
-   * Validate credentials by calling WordPress API
+   * Get JWT token by authenticating with WordPress JWT endpoint
    */
-  const validateCredentials = async (username: string, password: string): Promise<User | null> => {
+  const getJwtToken = async (username: string, password: string): Promise<string | null> => {
     try {
       const apiUrl = getRootApiUrl();
-      const authHeader = createBasicAuthHeader(username, password);
       
-      // Try to get current user info to validate credentials
+      // Call JWT auth endpoint to get token - using the correct endpoint and format
+      const response = await fetch(`${apiUrl}/api/v1/token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: new URLSearchParams({
+          username,
+          password
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('JWT token received'); // Debug log
+        return data.jwt_token; // Changed from data.token to data.jwt_token
+      } else {
+        console.error('JWT authentication failed:', response.status, response.statusText);
+        const errorData = await response.json().catch(() => null);
+        if (errorData?.message) {
+          setError(errorData.message);
+        }
+        return null;
+      }
+    } catch (error) {
+      console.error('Error getting JWT token:', error);
+      return null;
+    }
+  };
+
+  /**
+   * Validate JWT token and get user info
+   */
+  const validateJwtToken = async (token: string): Promise<User | null> => {
+    try {
+      const apiUrl = getRootApiUrl();
+      const authHeader = createJwtAuthHeader(token);
+      
+      // Validate token and get user info
       const response = await fetch(`${apiUrl}/wp/v2/users/me`, {
         headers: {
           'Content-Type': 'application/json',
@@ -85,105 +120,108 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.log('User data received:', userData); // Debug log
         return {
           id: userData.id || 0,
-          username: userData.username || username,
+          username: userData.username || userData.slug || '',
           email: userData.email || '',
-          name: userData.name || userData.display_name || username
+          name: userData.name || userData.display_name || ''
         };
       } else {
-        console.error('Credential validation failed:', response.status, response.statusText);
+        console.error('Token validation failed:', response.status, response.statusText);
         return null;
       }
     } catch (error) {
-      console.error('Error validating credentials:', error);
+      console.error('Error validating token:', error);
       return null;
     }
   };
 
   /**
-   * Save credentials to localStorage
+   * Save JWT token and user to localStorage
    */
-  const saveCredentials = (username: string, password: string, user: User) => {
+  const saveAuthData = (token: string, user: User) => {
     try {
-      localStorage.setItem(STORAGE_KEYS.USERNAME, username);
-      localStorage.setItem(STORAGE_KEYS.PASSWORD, password);
+      localStorage.setItem(STORAGE_KEYS.JWT_TOKEN, token);
       localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
     } catch (error) {
-      console.error('Error saving credentials to localStorage:', error);
+      console.error('Error saving auth data to localStorage:', error);
     }
   };
 
   /**
-   * Load credentials from localStorage
+   * Load auth data from localStorage
    */
-  const loadCredentials = (): { username: string; password: string; user: User } | null => {
+  const loadAuthData = (): { token: string; user: User } | null => {
     try {
-      const username = localStorage.getItem(STORAGE_KEYS.USERNAME);
-      const password = localStorage.getItem(STORAGE_KEYS.PASSWORD);
+      const token = localStorage.getItem(STORAGE_KEYS.JWT_TOKEN);
       const userStr = localStorage.getItem(STORAGE_KEYS.USER);
       
-      if (username && password && userStr) {
+      if (token && userStr) {
         const user = JSON.parse(userStr);
-        return { username, password, user };
+        return { token, user };
       }
     } catch (error) {
-      console.error('Error loading credentials from localStorage:', error);
+      console.error('Error loading auth data from localStorage:', error);
     }
     return null;
   };
 
   /**
-   * Clear stored credentials
+   * Clear stored auth data
    */
-  const clearStoredCredentials = () => {
+  const clearStoredAuthData = () => {
     try {
-      localStorage.removeItem(STORAGE_KEYS.USERNAME);
-      localStorage.removeItem(STORAGE_KEYS.PASSWORD);
+      localStorage.removeItem(STORAGE_KEYS.JWT_TOKEN);
       localStorage.removeItem(STORAGE_KEYS.USER);
       // Clear global state
-      globalCredentials = null;
+      globalJwtToken = null;
     } catch (error) {
-      console.error('Error clearing credentials from localStorage:', error);
+      console.error('Error clearing auth data from localStorage:', error);
     }
   };
 
   /**
-   * Update global credentials state
+   * Update global JWT token state
    */
-  const updateGlobalCredentials = (username: string | null, password: string | null) => {
-    if (username && password) {
-      globalCredentials = { username, password };
-    } else {
-      globalCredentials = null;
-    }
+  const updateGlobalToken = (token: string | null) => {
+    globalJwtToken = token;
     globalAuthInitialized = true;
   };
 
   /**
-   * Login function - authenticates with WordPress using Basic Auth
+   * Login function - authenticates with WordPress using JWT
    */
   const login = async (username: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
     
     try {
-      const userData = await validateCredentials(username, password);
+      // Get JWT token
+      const token = await getJwtToken(username, password);
       
-      if (userData) {
-        console.log('Login successful, setting user:', userData); // Debug log
-        setCredentials({ username, password });
-        setUser(userData);
-        setIsAuthenticated(true);
+      if (token) {
+        // Validate token and get user data
+        const userData = await validateJwtToken(token);
         
-        // Update global state immediately
-        updateGlobalCredentials(username, password);
-        
-        // Save to localStorage for persistence
-        saveCredentials(username, password, userData);
-        
-        setIsLoading(false);
-        return true;
+        if (userData) {
+          console.log('Login successful, setting user:', userData); // Debug log
+          setJwtToken(token);
+          setUser(userData);
+          setIsAuthenticated(true);
+          
+          // Update global state immediately
+          updateGlobalToken(token);
+          
+          // Save to localStorage for persistence
+          saveAuthData(token, userData);
+          
+          setIsLoading(false);
+          return true;
+        } else {
+          setError('Failed to validate token');
+          setIsLoading(false);
+          return false;
+        }
       } else {
-        setError('Invalid username or password');
+        setError(error || 'Invalid username or password');
         setIsLoading(false);
         return false;
       }
@@ -199,20 +237,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
    * Logout function
    */
   const logout = (): void => {
-    setCredentials(null);
+    setJwtToken(null);
     setIsAuthenticated(false);
     setUser(null);
     setError(null);
-    updateGlobalCredentials(null, null);
-    clearStoredCredentials();
+    updateGlobalToken(null);
+    clearStoredAuthData();
   };
 
   /**
    * Get authentication header for API requests
    */
   const getAuthHeader = (): { Authorization: string } | {} => {
-    if (credentials) {
-      return createBasicAuthHeader(credentials.username, credentials.password);
+    if (jwtToken) {
+      return createJwtAuthHeader(jwtToken);
     }
     return {};
   };
@@ -222,37 +260,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
    */
   useEffect(() => {
     const initializeAuth = async () => {
-      console.log('🔐 Initializing authentication...');
-      const storedCredentials = loadCredentials();
+      console.log('🔐 Initializing JWT authentication...');
+      const storedAuthData = loadAuthData();
       
-      if (storedCredentials) {
-        console.log('🔐 Found stored credentials, validating...');
-        // Update global state immediately with stored credentials
-        updateGlobalCredentials(storedCredentials.username, storedCredentials.password);
+      if (storedAuthData) {
+        console.log('🔐 Found stored JWT token, validating...');
+        // Update global state immediately with stored token
+        updateGlobalToken(storedAuthData.token);
         
-        // Validate stored credentials
-        const userData = await validateCredentials(storedCredentials.username, storedCredentials.password);
+        // Validate stored token
+        const userData = await validateJwtToken(storedAuthData.token);
         
         if (userData) {
-          console.log('🔐 Stored credentials are valid');
-          setCredentials({ 
-            username: storedCredentials.username, 
-            password: storedCredentials.password 
-          });
+          console.log('🔐 Stored JWT token is valid');
+          setJwtToken(storedAuthData.token);
           setUser(userData);
           setIsAuthenticated(true);
         } else {
-          console.log('🔐 Stored credentials are invalid, clearing...');
-          // Stored credentials are invalid, clear them
-          clearStoredCredentials();
-          updateGlobalCredentials(null, null);
+          console.log('🔐 Stored JWT token is invalid, clearing...');
+          // Stored token is invalid, clear it
+          clearStoredAuthData();
+          updateGlobalToken(null);
         }
       } else {
-        console.log('🔐 No stored credentials found');
-        updateGlobalCredentials(null, null);
+        console.log('🔐 No stored JWT token found');
+        updateGlobalToken(null);
       }
       
-      console.log('🔐 Authentication initialization complete');
+      console.log('🔐 JWT authentication initialization complete');
       setIsLoading(false);
     };
 
@@ -288,44 +323,31 @@ export const useAuth = (): AuthContextType => {
 
 /**
  * Helper function to create auth header - exported for backward compatibility
- * This now uses global state for immediate access during initialization
+ * This now uses JWT tokens from global state for immediate access during initialization
  */
 export const createAuthHeader = (): { Authorization: string } | {} => {
-  // Use global credentials if available (immediate access)
-  if (globalCredentials) {
-    console.log('🔐 Using global credentials for auth header');
-    const credentials = btoa(`${globalCredentials.username}:${globalCredentials.password}`);
-    return { Authorization: `Basic ${credentials}` };
+  // Use global JWT token if available (immediate access)
+  if (globalJwtToken) {
+    console.log('🔐 Using global JWT token for auth header');
+    return { Authorization: `Bearer ${globalJwtToken}` };
   }
   
   // During initialization, try to read from localStorage directly
   if (!globalAuthInitialized) {
     console.log('🔐 Auth not initialized yet, trying localStorage...');
     try {
-      const username = localStorage.getItem(STORAGE_KEYS.USERNAME);
-      const password = localStorage.getItem(STORAGE_KEYS.PASSWORD);
+      const token = localStorage.getItem(STORAGE_KEYS.JWT_TOKEN);
       
-      if (username && password) {
-        console.log('🔐 Using localStorage credentials for auth header');
-        const credentials = btoa(`${username}:${password}`);
-        return { Authorization: `Basic ${credentials}` };
+      if (token) {
+        console.log('🔐 Using localStorage JWT token for auth header');
+        return { Authorization: `Bearer ${token}` };
       }
     } catch (error) {
-      console.error('Error reading stored credentials during initialization:', error);
+      console.error('Error reading stored JWT token during initialization:', error);
     }
   }
   
-  // Fallback to environment variables (development/testing)
-  const username = import.meta.env.VITE_WP_APP_USERNAME;
-  const password = import.meta.env.VITE_WP_APP_PASSWORD;
-  
-  if (username && password) {
-    console.log('🔐 Using environment credentials for auth header');
-    const credentials = btoa(`${username}:${password}`);
-    return { Authorization: `Basic ${credentials}` };
-  }
-  
-  console.log('🔐 No auth credentials available');
+  console.log('🔐 No JWT token available');
   return {};
 };
 

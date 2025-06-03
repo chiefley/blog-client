@@ -1,11 +1,17 @@
 // src/components/posts/PostCard.tsx
 import { Card, CardContent, Box, Typography, Avatar, Chip } from '@mui/material';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { PostCardProps, Category, Tag } from '../../types/interfaces';
 import LazyImage from '../common/LazyImage';
 import { getResponsiveImageUrl } from '../../utils/imageUtils';
 
 const PostCard = ({ post }: PostCardProps) => {
+  const navigate = useNavigate();
+  // Check if post has a valid slug (drafts might not have slugs)
+  const hasValidSlug = post.slug && post.slug.trim() !== '';
+  // Use slug for published posts, ID for drafts without slugs
+  const postLink = hasValidSlug ? `/post/${post.slug}` : `/post/id/${post.id}`;
+  
   // Get the featured image URL if available
   const getFeaturedImage = () => {
     // First check if better_featured_image is available from the Better REST API Featured Image plugin
@@ -38,7 +44,7 @@ const PostCard = ({ post }: PostCardProps) => {
     }
     
     // Default image if none is available
-    return 'https://via.placeholder.com/300x200';
+    return 'https://placehold.co/300x200';
   };
   
   // Get author information
@@ -48,11 +54,11 @@ const PostCard = ({ post }: PostCardProps) => {
         name: post._embedded.author[0].name || 'Unknown',
         avatar: post._embedded.author[0].avatar_urls?.['48'] 
           ? post._embedded.author[0].avatar_urls['48'] 
-          : 'https://via.placeholder.com/48'
+          : 'https://placehold.co/48x48'
       };
     }
     
-    return { name: 'Unknown', avatar: 'https://via.placeholder.com/48' };
+    return { name: 'Unknown', avatar: 'https://placehold.co/48x48' };
   };
   
   // Get categories
@@ -106,7 +112,7 @@ const PostCard = ({ post }: PostCardProps) => {
       {/* Using LazyImage component instead of CardMedia */}
       <Box
         component={RouterLink}
-        to={`/post/${post.slug}`}
+        to={postLink}
         sx={{
           width: { xs: '100%', sm: '30%' },
           height: { xs: '200px', sm: 'auto' },
@@ -121,18 +127,45 @@ const PostCard = ({ post }: PostCardProps) => {
         }}
       >
         <LazyImage
-          src={responsiveImageUrl || 'https://via.placeholder.com/300x200'}
+          src={responsiveImageUrl || 'https://placehold.co/300x200'}
           alt={post.title.rendered}
           height="100%"
           width="100%"
           objectFit="cover"
           loadingHeight="100%"
-          fallbackSrc="https://via.placeholder.com/300x200"
+          fallbackSrc="https://placehold.co/300x200"
         />
       </Box>
       
       <CardContent sx={{ flex: '1', display: 'flex', flexDirection: 'column' }}>
         <Box sx={{ mb: 1, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+          {/* Show draft status if applicable */}
+          {post.status === 'draft' && (
+            <Chip
+              label="Draft"
+              size="small"
+              color="warning"
+              sx={{ 
+                borderRadius: 1,
+                fontWeight: 'bold'
+              }}
+            />
+          )}
+          
+          {/* Show if post has no slug - using ID instead */}
+          {!hasValidSlug && (
+            <Chip
+              label="ID Preview"
+              size="small"
+              color="info"
+              variant="outlined"
+              sx={{ 
+                borderRadius: 1,
+                fontSize: '0.7rem'
+              }}
+            />
+          )}
+          
           {/* Categories */}
           {categories.map((category) => (
             <Chip
@@ -178,20 +211,33 @@ const PostCard = ({ post }: PostCardProps) => {
         
         <Typography 
           variant="h5" 
-          component={RouterLink}
-          to={`/post/${post.slug}`}
-          sx={{ 
-            textDecoration: 'none', 
-            color: 'text.primary',
-            mb: 1,
-            '&:hover': {
-              color: 'primary.main'
-            }
-          }}
-          dangerouslySetInnerHTML={{ __html: post.title.rendered }}
-        />
+          component="h2"
+          sx={{ mb: 1 }}
+        >
+          <Box
+            component={RouterLink}
+            to={postLink}
+            sx={{ 
+              textDecoration: 'none', 
+              color: 'text.primary',
+              display: 'block',
+              '&:hover': {
+                color: 'primary.main'
+              }
+            }}
+            dangerouslySetInnerHTML={{ __html: post.title.rendered }}
+          />
+        </Typography>
         
         <Box 
+          onClick={(e) => {
+            // Intercept clicks on links within the excerpt
+            const target = e.target as HTMLElement;
+            if (target.tagName === 'A') {
+              e.preventDefault();
+              navigate(postLink);
+            }
+          }}
           dangerouslySetInnerHTML={{ __html: post.excerpt.rendered }} 
           sx={{ 
             mb: 2,
@@ -199,7 +245,11 @@ const PostCard = ({ post }: PostCardProps) => {
             display: '-webkit-box',
             WebkitLineClamp: 3,
             WebkitBoxOrient: 'vertical',
-            '& a': { color: 'primary.main' }
+            '& a': { 
+              color: 'primary.main',
+              cursor: 'pointer',
+              textDecoration: 'underline'
+            }
           }}
         />
         

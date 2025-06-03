@@ -278,25 +278,165 @@ export const getPosts = async (options: {
     params.append('search', search);
   }
 
+  // Get API URL first
+  const apiUrl = getApiUrl();
+  
   // Check authentication status
   const userIsAuthenticated = isAuthenticated();
   
-  // Simplified approach: Don't specify status parameter at all when authenticated and wanting drafts
-  // Let WordPress return what it's allowed to return based on user permissions
+  // Create request options with auth if user is authenticated
+  const requestOptions = createRequestOptions(userIsAuthenticated);
+  
+  // WordPress REST API behavior: 
+  // - Without status parameter: returns only published posts (even when authenticated)
+  // - To get drafts: must make separate request for draft posts
+  // - Multiple statuses in one request often requires special permissions
+  
+  let allPosts: WordPressPost[] = [];
+  let totalPagesCount = 1;
+  
   if (includeDrafts && userIsAuthenticated) {
-    console.log('🔍 Making authenticated request without status parameter - letting WordPress decide what posts to return');
-  } else {
-    // Only specify published status when we explicitly don't want drafts or user isn't authenticated
+    console.log('🔍 Making authenticated requests for published and draft posts separately');
+    
+    // First, get published posts
     params.append('status', 'publish');
-    console.log('📖 Requesting only published posts');
+    const publishedUrl = `${apiUrl}/posts?${params}`;
+    
+    try {
+      const publishedResponse = await fetch(publishedUrl, requestOptions);
+      if (publishedResponse.ok) {
+        const publishedPosts = await publishedResponse.json();
+        allPosts = [...publishedPosts];
+        totalPagesCount = parseInt(publishedResponse.headers.get('X-WP-TotalPages') || '1', 10);
+        console.log(`📖 Fetched ${publishedPosts.length} published posts`);
+      }
+    } catch (error) {
+      console.error('Error fetching published posts:', error);
+    }
+    
+    // Then try to get draft posts separately
+    // First, try to get current user info to use author filter
+    let userId: number | null = null;
+    let isSuperAdmin = false;
+    try {
+      const userResponse = await fetch(`${apiUrl.replace('/posts', '/users/me')}`, requestOptions);
+      if (userResponse.ok) {
+        const userData = await userResponse.json();
+        userId = userData.id;
+        isSuperAdmin = userData.is_super_admin === true;
+        console.log(`👤 Current user: ${userData.name} (ID: ${userId})${isSuperAdmin ? ' [SUPER ADMIN]' : ''}`);
+        
+        // Log roles for debugging
+        if (userData.roles && userData.roles.length > 0) {
+          console.log(`👤 User roles: ${userData.roles.join(', ')}`);
+        }
+      }
+    } catch (e) {
+      console.log('Could not get user ID for draft filtering');
+    }
+    
+    // Try different approaches to get draft posts
+    const draftParams = new URLSearchParams();
+    // Copy relevant params but not status
+    ['page', 'per_page', '_embed'].forEach(key => {
+      const value = params.get(key);
+      if (value) draftParams.set(key, value);
+    });
+    
+    // Set draft status
+    draftParams.set('status', 'draft');
+    
+    // If filtering by category, keep that filter
+    const categoryId = params.get('categories');
+    if (categoryId) {
+      draftParams.set('categories', categoryId);
+    }
+    
+    // If we have a user ID, try to get user's own drafts first
+    if (userId) {
+      draftParams.set('author', userId.toString());
+    }
+    
+    const draftUrl = `${apiUrl}/posts?${draftParams}`;
+    
+    try {
+      const draftResponse = await fetch(draftUrl, requestOptions);
+      if (draftResponse.ok) {
+        const draftPosts = await draftResponse.json();
+        
+        // Ensure draftPosts is an array before spreading
+        if (Array.isArray(draftPosts)) {
+          allPosts = [...allPosts, ...draftPosts];
+          console.log(`📝 Fetched ${draftPosts.length} draft posts${userId ? ' (filtered by author)' : ''}`);
+          
+          // Update total pages if draft response has more
+          const draftTotalPages = parseInt(draftResponse.headers.get('X-WP-TotalPages') || '1', 10);
+          totalPagesCount = Math.max(totalPagesCount, draftTotalPages);
+        } else {
+          console.log('📝 Draft posts response was not an array:', draftPosts);
+        }
+      } else {
+        console.log(`📝 Could not fetch draft posts (status: ${draftResponse.status})${userId ? ' even with author filter' : ''}`);
+        
+        // Try to get error details for debugging
+        try {
+          const errorData = await draftResponse.json();
+          console.log('Draft posts error:', errorData.message || errorData.code || 'Unknown error');
+          
+          // If author-filtered request failed, try without author filter
+          if (userId && (draftResponse.status === 403 || draftResponse.status === 401)) {
+            console.log('🔄 Retrying draft fetch without author filter...');
+            draftParams.delete('author');
+            const retryUrl = `${apiUrl}/posts?${draftParams}`;
+            const retryResponse = await fetch(retryUrl, requestOptions);
+            
+            if (retryResponse.ok) {
+              const retryPosts = await retryResponse.json();
+              if (Array.isArray(retryPosts)) {
+                allPosts = [...allPosts, ...retryPosts];
+                console.log(`📝 Fetched ${retryPosts.length} draft posts (without author filter)`);
+              }
+            } else {
+              console.log(`📝 Retry also failed (status: ${retryResponse.status})`);
+              
+              // For superadmins, log more debugging info
+              if (isSuperAdmin) {
+                console.warn('⚠️ Super Admin cannot access drafts - this may be a WordPress REST API limitation');
+                console.log('Debug info:', {
+                  apiUrl,
+                  draftUrl: retryUrl,
+                  blogPath: getCurrentBlogPath(),
+                  status: retryResponse.status
+                });
+              }
+            }
+          }
+        } catch (e) {
+          // Ignore if we can't parse error response
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching draft posts:', error);
+    }
+    
+    // Sort combined posts by date (newest first)
+    allPosts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    
+    // Return paginated results
+    const startIndex = (page - 1) * perPage;
+    const endIndex = startIndex + perPage;
+    const paginatedPosts = allPosts.slice(startIndex, endIndex);
+    
+    return { posts: paginatedPosts, totalPages: totalPagesCount };
   }
+  
+  // Standard request for published posts only
+  params.append('status', 'publish');
+  console.log('📖 Requesting only published posts');
 
-  const apiUrl = getApiUrl();
   const requestUrl = `${apiUrl}/posts?${params}`;
   
   try {
-    // Create request options with auth if user is authenticated
-    const requestOptions = createRequestOptions(userIsAuthenticated);
 
     // For debugging - log the request details
     console.log('Request URL:', requestUrl);
@@ -398,38 +538,86 @@ export const getPostBySlug = async (slug: string, includeDrafts = false): Promis
   params.append('slug', slug);
   params.append('_embed', 'author,wp:featuredmedia,wp:term');
 
+  // Get API URL first
+  const apiUrl = getApiUrl();
+  
   // Check authentication status  
   const userIsAuthenticated = isAuthenticated();
   
-  // Simplified approach: Don't specify status parameter when authenticated and wanting drafts
+  // Create request options with auth if user is authenticated
+  const requestOptions = createRequestOptions(userIsAuthenticated);
+  
+  // WordPress REST API behavior requires explicit status parameter for drafts
   if (includeDrafts && userIsAuthenticated) {
-    console.log('🔍 Searching for post without status parameter - letting WordPress decide what to return');
-  } else {
-    // Only specify published status when we explicitly don't want drafts or user isn't authenticated
+    console.log('🔍 Searching for post in both published and draft posts');
+    
+    // First try to find in published posts
     params.append('status', 'publish');
-    console.log('📖 Searching only published posts');
+    const publishedUrl = `${apiUrl}/posts?${params}`;
+    
+    try {
+      const publishedResponse = await fetch(publishedUrl, requestOptions);
+      if (publishedResponse.ok) {
+        const publishedPosts = await publishedResponse.json();
+        if (publishedPosts.length > 0) {
+          console.log(`✅ Found published post: "${publishedPosts[0].title.rendered}"`);
+          return publishedPosts[0];
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching published post:', error);
+    }
+    
+    // If not found in published, try drafts
+    const draftParams = new URLSearchParams(params);
+    draftParams.set('status', 'draft');
+    const draftUrl = `${apiUrl}/posts?${draftParams}`;
+    
+    try {
+      const draftResponse = await fetch(draftUrl, requestOptions);
+      if (draftResponse.ok) {
+        const draftPosts = await draftResponse.json();
+        
+        // Ensure draftPosts is an array
+        if (Array.isArray(draftPosts) && draftPosts.length > 0) {
+          console.log(`📝 Found draft post: "${draftPosts[0].title.rendered}"`);
+          return draftPosts[0];
+        }
+      } else {
+        console.log(`📝 Could not fetch draft posts (status: ${draftResponse.status})`);
+        
+        // Try to get error details for debugging
+        try {
+          const errorData = await draftResponse.json();
+          console.log('Draft posts error response:', errorData);
+        } catch (e) {
+          // Ignore if we can't parse error response
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching draft post:', error);
+    }
+    
+    console.log(`❌ Post with slug "${slug}" not found in published or drafts`);
+    return null;
   }
+  
+  // Only search published posts (non-authenticated case)
+  params.append('status', 'publish');
+  console.log('📖 Searching only published posts');
 
-  const apiUrl = getApiUrl();
   const requestUrl = `${apiUrl}/posts?${params}`;
 
   try {
-    // Create request options with auth if user is authenticated
-    const requestOptions = createRequestOptions(userIsAuthenticated);
-
     console.log('Fetching post by slug:', slug);
     console.log('Request URL:', requestUrl);
-    console.log('Include drafts:', includeDrafts);
-    console.log('User authenticated:', userIsAuthenticated);
 
     const response = await fetch(requestUrl, requestOptions);
     
     console.log(`Post by Slug API Response [${response.status}]:`, {
       slug,
       url: requestUrl,
-      status: response.status,
-      authenticated: userIsAuthenticated,
-      includeDrafts: includeDrafts
+      status: response.status
     });
     
     if (!response.ok) {
@@ -450,9 +638,6 @@ export const getPostBySlug = async (slug: string, includeDrafts = false): Promis
     
     if (post) {
       console.log(`✅ Found post: "${post.title.rendered}" (status: ${post.status})`);
-      if (post.status === 'draft') {
-        console.log(`📝 Retrieved draft post`);
-      }
     } else {
       console.log(`❌ Post with slug "${slug}" not found`);
     }
@@ -460,6 +645,63 @@ export const getPostBySlug = async (slug: string, includeDrafts = false): Promis
     return post;
   } catch (error) {
     console.error('Error fetching post by slug:', error);
+    return null;
+  }
+};
+
+/**
+ * Get a single post by ID - useful for drafts that don't have slugs
+ */
+export const getPostById = async (id: number, includeDrafts = false): Promise<WordPressPost | null> => {
+  const apiUrl = getApiUrl();
+  
+  // Check authentication status  
+  const userIsAuthenticated = isAuthenticated();
+  
+  // Create request options with auth if user is authenticated
+  const requestOptions = createRequestOptions(userIsAuthenticated);
+  
+  try {
+    console.log(`Fetching post by ID: ${id}`);
+    
+    // WordPress REST API allows fetching by ID directly
+    const requestUrl = `${apiUrl}/posts/${id}?_embed=author,wp:featuredmedia,wp:term`;
+    
+    const response = await fetch(requestUrl, requestOptions);
+    
+    console.log(`Post by ID API Response [${response.status}]:`, {
+      id,
+      url: requestUrl,
+      status: response.status,
+      authenticated: userIsAuthenticated
+    });
+    
+    if (!response.ok) {
+      // If we get a 401/403 and we're trying to get a draft, it's likely a permissions issue
+      if ((response.status === 401 || response.status === 403) && includeDrafts) {
+        console.log('📝 Access denied to draft post - user may not have permission');
+      }
+      
+      let errorDetails = '';
+      try {
+        const errorData = await response.text();
+        errorDetails = errorData.substring(0, 200);
+      } catch (e) {
+        // Ignore if we can't get error details
+      }
+      
+      throw new Error(`API request failed with status ${response.status}: ${errorDetails}`);
+    }
+    
+    const post = await response.json();
+    
+    if (post) {
+      console.log(`✅ Found post by ID: "${post.title.rendered}" (status: ${post.status})`);
+    }
+    
+    return post;
+  } catch (error) {
+    console.error('Error fetching post by ID:', error);
     return null;
   }
 };
