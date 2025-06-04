@@ -246,9 +246,16 @@ const OptimizedWeaselSimulation: React.FC<OptimizedWeaselSimulationProps> = ({
             <Slider
               value={speed}
               onChange={handleSpeedChange}
-              step={0.5}
+              step={speed < 10 ? 0.5 : 5}
               min={0.5}
-              max={5}
+              max={50}
+              marks={[
+                { value: 1, label: '1x' },
+                { value: 5, label: '5x' },
+                { value: 10, label: '10x' },
+                { value: 25, label: '25x' },
+                { value: 50, label: 'Max' }
+              ]}
               size="small"
               sx={{ flexGrow: 1, mx: 1 }}
             />

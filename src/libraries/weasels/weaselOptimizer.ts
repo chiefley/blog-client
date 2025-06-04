@@ -72,9 +72,12 @@ export class WeaselSimulationOptimizer {
     if (this.options.speedMultiplier! <= 1) {
       // Regular speed - use requestAnimationFrame for smooth animation
       this.startAnimationFrameCycle();
+    } else if (this.options.speedMultiplier! >= 10) {
+      // Very fast speed - run multiple cycles per frame
+      this.startMaxSpeedCycle();
     } else {
-      // Faster speed - use optimized interval
-      const interval = Math.max(10, Math.floor(500 / this.options.speedMultiplier!));
+      // Medium speed - use optimized interval without artificial minimum
+      const interval = Math.floor(500 / this.options.speedMultiplier!);
       this.cycleInterval = window.setInterval(() => { this.runWorldCycle(); }, interval);
     }
   }
@@ -89,6 +92,23 @@ export class WeaselSimulationOptimizer {
       if (elapsed >= 500) { // Original was 500ms per cycle
         this.runWorldCycle();
         this.lastCycleTime = timestamp;
+      }
+
+      this.animationFrameId = requestAnimationFrame(animate);
+    };
+
+    this.animationFrameId = requestAnimationFrame(animate);
+  }
+
+  private startMaxSpeedCycle(): void {
+    const cyclesPerFrame = Math.floor(this.options.speedMultiplier! / 10);
+    
+    const animate = () => {
+      if (!this.isRunning) return;
+
+      // Run multiple cycles per frame for maximum speed
+      for (let i = 0; i < cyclesPerFrame; i++) {
+        this.runWorldCycle();
       }
 
       this.animationFrameId = requestAnimationFrame(animate);
