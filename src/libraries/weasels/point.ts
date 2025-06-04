@@ -2,6 +2,12 @@
 export class Point {
   constructor(public x: number, public y: number) {
   }
+  
+  // Copy values from another point
+  public copyFrom(other: Point): void {
+    this.x = other.x;
+    this.y = other.y;
+  }
 
   // Returns the distance to another point - keeping original implementation
   // but with slight optimization

@@ -168,7 +168,8 @@ export class Dna {
       let ng = new Gene();
       this.genes[i] = ng;
       const g = inGenes[i];
-      ng.stop = new Point(g.stop.x, g.stop.y);
+      // Reuse the Point object instead of creating a new one
+      ng.stop.copyFrom(g.stop);
     }
 
     // The first gene is always the root

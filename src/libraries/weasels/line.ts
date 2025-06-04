@@ -12,6 +12,15 @@ export class Line {
     this._dx = this.end.x - this.start.x;
     this._dy = this.end.y - this.start.y;
   }
+  
+  // Update endpoints without creating new Line
+  public update(start: Point, end: Point): void {
+    this.start = start;
+    this.end = end;
+    this._dx = this.end.x - this.start.x;
+    this._dy = this.end.y - this.start.y;
+    this._cachedLength = null; // Invalidate cache
+  }
 
   // Return the length of this line - with caching
   public length = (): number => {
