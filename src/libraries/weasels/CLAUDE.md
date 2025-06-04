@@ -59,3 +59,32 @@ const simulation = initWeaselSimulation(container, 5, true);
 - Limit food sources for better performance
 - Consider disabling badger for faster evolution
 - Monitor generation count for convergence
+
+## Performance Optimizations (January 2025)
+
+### 1. Object Pooling
+- **Child Weasels**: 5000 weasels reused instead of created/destroyed each cycle
+- **DNA Copying**: Point objects reused via `copyFrom()` method
+
+### 2. Algorithmic Improvements
+- **Spatial Indexing**: Grid-based food source lookup (O(n*m) → O(k*m))
+- **No Array Copying**: Uses Set to track consumed food indices
+- **Squared Distances**: Comparison without expensive calculations
+
+### 3. Cache Management
+- **Smart Invalidation**: Only affected caches cleared based on mutation type
+  - Move operations: Only paths cache invalidated
+  - Add/Delete: Both stops and paths caches invalidated
+
+### 4. Speed Control
+- **0.5x-50x range**: No artificial delays at high speeds
+- **<10x**: Uses proportional intervals
+- **≥10x**: Multiple cycles per animation frame
+
+### Key Files Modified
+- `sweaselworld.ts`: Object pooling, spatial index, food tracking
+- `point.ts`: Added `copyFrom()` and `rangeFromSquaredApprox()`
+- `dna.ts`: Reuses Point objects in `copyIn()`
+- `sweasel.ts`: Smart cache invalidation
+- `weaselOptimizer.ts`: Enhanced speed control
+- `OptimizedWeaselSimulation.tsx`: Extended speed range
