@@ -26,7 +26,7 @@ export class SWeaselWorld {
     // Pre-calculate gaussian distribution values
     this._gaussian = new Array(10000);
     for (let i = 0; i < 10000; i++) {
-      this._gaussian[i] = this.gaussian(i, 0, 500);
+      this._gaussian[i] = SWeaselWorld.gaussian(i, 0, 500);
     }
 
     // Create initial fittest weasel
@@ -257,8 +257,8 @@ export class SWeaselWorld {
       && (point.y <= 1000);
   }
 
-  private gaussian = (x: number, Mean: number, StdDev: number): number => {
+  private static gaussian(x: number, Mean: number, StdDev: number): number {
     const a = x - Mean;
     return Math.exp(-(a * a) / (2 * StdDev * StdDev));
-  };
+  }
 }

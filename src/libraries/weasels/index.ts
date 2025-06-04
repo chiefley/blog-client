@@ -2,13 +2,7 @@
 import { SWeaselVm } from './sweaselvm';
 import { WeaselSimulationOptimizer } from './weaselOptimizer';
 
-export { Point } from './point';
-export { Line } from './line';
-export { Gene } from './gene';
-export { Dna } from './dna';
-export { SBadger } from './sbadger';
-export { SWeasel } from './sweasel';
-export { SWeaselWorld } from './sweaselworld';
+// Only export what's needed by consumers
 export { SWeaselVm } from './sweaselvm';
 export { WeaselSimulationOptimizer } from './weaselOptimizer';
 

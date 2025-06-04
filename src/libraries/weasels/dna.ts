@@ -28,7 +28,7 @@ export class Dna {
     for (let i = 0; i < nrGenes; i++) {
       let g = new Gene();
       this.genes[i] = g;
-      g.Init();
+      g.init();
     }
 
     // Connect genes in sequence initially
@@ -42,7 +42,7 @@ export class Dna {
   // Add a new gene to this dna
   public addNewGene = (): Gene => {
     let newGene = new Gene();
-    newGene.Init();
+    newGene.init();
     this.genes.push(newGene);
     // Invalidate caches
     this._modified = true;
@@ -108,7 +108,7 @@ export class Dna {
     return true;
   }
 
-  public childCount = (aGene: Gene): number => {
+  private childCount = (aGene: Gene): number => {
     let count = 0;
     for (let g of this.genes) {
       if (g.parent === aGene) {
@@ -243,7 +243,7 @@ export class Dna {
     return true;
   }
 
-  public reportDna = (msg: string): void => {
+  private reportDna = (msg: string): void => {
     console.log("");
     for (let g of this.genes) {
       const parentIndex = g.parent ? this.genes.indexOf(g.parent) : -1;
