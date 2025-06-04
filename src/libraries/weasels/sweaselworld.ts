@@ -237,24 +237,29 @@ export class SWeaselWorld {
       const indicesToSearch = nearbyIndices.length > 0 ? nearbyIndices : 
         Array.from({length: this.foodSources.length}, (_, i) => i);
 
-      // Find the closest non-consumed food source
+      // Find the closest non-consumed food source using squared distances
       let closestIndex = -1;
-      let closestDistance = Infinity;
+      let closestDistanceSquared = Infinity;
 
       for (const idx of indicesToSearch) {
         if (consumed.has(idx)) continue;
         
-        const dist = stop.rangeFrom(this.foodSources[idx]);
-        if (dist < closestDistance) {
-          closestDistance = dist;
+        // Use squared distance for comparison (faster)
+        const distSquared = stop.rangeFromSquaredApprox(this.foodSources[idx]);
+        if (distSquared < closestDistanceSquared) {
+          closestDistanceSquared = distSquared;
           closestIndex = idx;
         }
       }
 
-      if (closestIndex !== -1 && closestDistance < 150) { // Only consume if close enough
-        // Add calories from this source
-        cals += this.sourceCalories(closestDistance);
-        consumed.add(closestIndex);
+      if (closestIndex !== -1) {
+        // Calculate actual distance only for the closest source
+        const actualDistance = stop.rangeFrom(this.foodSources[closestIndex]);
+        if (actualDistance < 150) { // Only consume if close enough
+          // Add calories from this source using actual distance
+          cals += this.sourceCalories(actualDistance);
+          consumed.add(closestIndex);
+        }
       }
     }
 

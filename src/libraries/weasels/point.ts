@@ -24,4 +24,13 @@ export class Point {
     this.x += (Math.random() * scale) - halfScale;
     this.y += (Math.random() * scale) - halfScale;
   };
+
+  // Returns a value proportional to squared distance - for comparison only
+  // Not the actual distance - use rangeFrom for actual distance
+  public rangeFromSquaredApprox = (fromP: Point): number => {
+    const xdiff = fromP.x - this.x;
+    const ydiff = fromP.y - this.y;
+    // Return squared differences for comparison purposes
+    return xdiff * xdiff + ydiff * ydiff;
+  };
 }
