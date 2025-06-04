@@ -8,8 +8,13 @@ export class SWeaselWorld {
   public foodSources: Point[] = [];
   public fittestWeasel: SWeasel;
   private _children: SWeasel[] = [];
+  private _childrenPool: SWeasel[] = [];  // Pool of reusable child weasels
   private _gaussian: number[] = [];
   public badger: SBadger;
+
+  // Spatial index for food sources
+  private _foodSourceGrid: Map<string, number[]> = new Map();
+  private _gridSize = 100; // 100x100 grid cells for 1000x1000 field
 
   // Cache for fitness calculations
   private _lastFitnessWeasel: SWeasel | null = null;
@@ -22,6 +27,9 @@ export class SWeaselWorld {
     for (let i = 0; i < sources; i++) {
       this.foodSources[i] = this.randomLocation();
     }
+    
+    // Build spatial index for food sources
+    this.buildFoodSourceGrid();
 
     // Pre-calculate gaussian distribution values
     this._gaussian = new Array(10000);
@@ -38,15 +46,21 @@ export class SWeaselWorld {
   }
 
   public init = (): void => {
-    // Create child weasels based on the fittest
-    // Preallocate children array for better performance
     const childCount = 5000;
-    this._children = new Array(childCount);
+    
+    // Ensure we have enough weasels in the pool
+    while (this._childrenPool.length < childCount) {
+      const newWeasel = new SWeasel(this.mutationLevel);
+      newWeasel.weaselIx = this._childrenPool.length;
+      this._childrenPool.push(newWeasel);
+    }
 
+    // Take weasels from the pool and copy the fittest into them
+    this._children = [];
     for (let i = 0; i < childCount; i++) {
-      this._children[i] = new SWeasel(this.mutationLevel);
-      this._children[i].weaselIx = i;
-      this._children[i].copyIn(this.fittestWeasel);
+      const child = this._childrenPool[i];
+      child.copyIn(this.fittestWeasel);
+      this._children.push(child);
     }
   };
 
@@ -88,8 +102,10 @@ export class SWeaselWorld {
       this._lastFitnessWeasel = null;
     }
 
-    // Clear children for next cycle
-    this._children = [];
+    // Instead of clearing, repopulate children with copies of the new fittest
+    for (let i = 0; i < len; i++) {
+      this._children[i].copyIn(this.fittestWeasel);
+    }
   };
 
   public earthquake = (): void => {
@@ -102,6 +118,9 @@ export class SWeaselWorld {
         this.foodSources[sourceToMoveIx].randomMove(300);
       } while (!this.isInField(this.foodSources[sourceToMoveIx]));
     }
+
+    // Rebuild spatial index after moving food sources
+    this.buildFoodSourceGrid();
 
     // Invalidate fitness cache
     this._lastFitnessWeasel = null;
@@ -201,37 +220,41 @@ export class SWeaselWorld {
   private caloriesAcquired = (weas: SWeasel): number => {
     let cals = 0;
     const stops = weas.stops();
-
-    // Create a copy of food sources for this calculation
-    const sources = this.foodSources.slice(0);
+    
+    // Track which food sources have been consumed (without copying array)
+    const consumed = new Set<number>();
 
     // Process each stop in the weasel's path
-    for (const c of stops) {
-      if (sources.length === 0) {
-        break;
+    for (const stop of stops) {
+      if (consumed.size >= this.foodSources.length) {
+        break; // All food consumed
       }
 
-      // Find the closest food source
-      let closestSource = sources[0];
-      let closestDistance = c.rangeFrom(closestSource);
+      // Use spatial index to find nearby food sources
+      const nearbyIndices = this.findNearbyFoodIndices(stop);
+      
+      // If no nearby food found, search all (fallback)
+      const indicesToSearch = nearbyIndices.length > 0 ? nearbyIndices : 
+        Array.from({length: this.foodSources.length}, (_, i) => i);
 
-      for (let i = 1; i < sources.length; i++) {
-        const dist = c.rangeFrom(sources[i]);
+      // Find the closest non-consumed food source
+      let closestIndex = -1;
+      let closestDistance = Infinity;
+
+      for (const idx of indicesToSearch) {
+        if (consumed.has(idx)) continue;
+        
+        const dist = stop.rangeFrom(this.foodSources[idx]);
         if (dist < closestDistance) {
           closestDistance = dist;
-          closestSource = sources[i];
+          closestIndex = idx;
         }
       }
 
-      // Add calories from this source
-      cals += this.sourceCalories(closestDistance);
-
-      // Remove the consumed source
-      const closestSourceIx = sources.indexOf(closestSource);
-      if (closestSourceIx >= 0) {
-        // Faster array removal by swapping with last element
-        sources[closestSourceIx] = sources[sources.length - 1];
-        sources.pop();
+      if (closestIndex !== -1 && closestDistance < 150) { // Only consume if close enough
+        // Add calories from this source
+        cals += this.sourceCalories(closestDistance);
+        consumed.add(closestIndex);
       }
     }
 
@@ -260,5 +283,42 @@ export class SWeaselWorld {
   private static gaussian(x: number, Mean: number, StdDev: number): number {
     const a = x - Mean;
     return Math.exp(-(a * a) / (2 * StdDev * StdDev));
+  }
+
+  private buildFoodSourceGrid(): void {
+    this._foodSourceGrid.clear();
+    
+    for (let i = 0; i < this.foodSources.length; i++) {
+      const food = this.foodSources[i];
+      const gridX = Math.floor(food.x / this._gridSize);
+      const gridY = Math.floor(food.y / this._gridSize);
+      const key = `${gridX},${gridY}`;
+      
+      if (!this._foodSourceGrid.has(key)) {
+        this._foodSourceGrid.set(key, []);
+      }
+      this._foodSourceGrid.get(key)!.push(i); // Store index instead of Point
+    }
+  }
+
+  private findNearbyFoodIndices(point: Point, searchRadius: number = 150): number[] {
+    const gridRadius = Math.ceil(searchRadius / this._gridSize);
+    const centerX = Math.floor(point.x / this._gridSize);
+    const centerY = Math.floor(point.y / this._gridSize);
+    
+    const nearbyIndices: number[] = [];
+    
+    // Search in surrounding grid cells
+    for (let dx = -gridRadius; dx <= gridRadius; dx++) {
+      for (let dy = -gridRadius; dy <= gridRadius; dy++) {
+        const key = `${centerX + dx},${centerY + dy}`;
+        const indices = this._foodSourceGrid.get(key);
+        if (indices) {
+          nearbyIndices.push(...indices);
+        }
+      }
+    }
+    
+    return nearbyIndices;
   }
 }
