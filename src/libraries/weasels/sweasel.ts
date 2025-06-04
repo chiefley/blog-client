@@ -68,7 +68,7 @@ export class SWeasel {
     }
     this._dna.copyIn(inWeasel._dna);
 
-    // Invalidate caches
+    // Invalidate all caches when copying
     this._modified = true;
     this._stopsCache = null;
     this._pathsCache = null;
@@ -103,8 +103,7 @@ export class SWeasel {
       }
     }
 
-    // Mark as modified after mutations
-    this._modified = true;
+    // Note: Cache invalidation is now handled within each mutation method
   };
 
   private randomMovePath = (): void => {
@@ -142,6 +141,8 @@ export class SWeasel {
       } while (newParent === geneToMove);
 
       this._dna.moveGeneToNewParent(geneToMove, newParent);
+      // Moving paths affects paths cache but not stops
+      this._pathsCache = null;
       this._modified = true;
     } catch (e) {
       console.error("Error in randomMovePath:", e);
@@ -156,6 +157,9 @@ export class SWeasel {
     try {
       let geneToMove = this._dna.randomGene();
       geneToMove.stop.randomMove(50);
+      // Moving a stop affects paths that connect to it
+      this._pathsCache = null;
+      // Stops cache remains valid - same stops, different positions
       this._modified = true;
     } catch (e) {
       console.error("Error in randomMoveStop:", e);
@@ -171,6 +175,9 @@ export class SWeasel {
       let parentGene = this._dna.randomGene();
       let newGene = this._dna.addNewGene();
       newGene.addToParent(parentGene);
+      // Adding a stop affects both caches
+      this._stopsCache = null;
+      this._pathsCache = null;
       this._modified = true;
     } catch (e) {
       console.error("Error in randomAddStop:", e);
@@ -199,6 +206,9 @@ export class SWeasel {
       } while (aGene.isRoot());
 
       this._dna.deleteGene(aGene);
+      // Deleting a stop affects both caches
+      this._stopsCache = null;
+      this._pathsCache = null;
       this._modified = true;
     } catch (e) {
       console.error("Error in randomDeleteStop:", e);
@@ -230,6 +240,9 @@ export class SWeasel {
         // Insert the new gene between the parent and the current gene
         aGene.parent = newGene;
         newGene.parent = parentGene;
+        // Inserting a stop affects both caches
+        this._stopsCache = null;
+        this._pathsCache = null;
         this._modified = true;
       }
     } catch (e) {
