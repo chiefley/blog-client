@@ -1,5 +1,7 @@
 import React from 'react';
 import { Box, Paper } from '@mui/material';
+import { useAuth } from '../../contexts/AuthContext';
+import { getCurrentBlogPath } from '../../config/multisiteConfig';
 
 // Import the componentized sidebar sections
 import Search from './Search';
@@ -8,6 +10,11 @@ import Tags from './Tags';
 import AdminLinks from './AdminLinks';
 
 const Sidebar: React.FC = () => {
+  const { isAuthenticated } = useAuth();
+  
+  // Get the current blog path for admin URL
+  const blogPath = getCurrentBlogPath();
+  const adminUrl = `https://wpcms.thechief.com${blogPath ? `/${blogPath}` : ''}/wp-admin`;
   return (
     <Paper 
       elevation={1} 
@@ -28,9 +35,9 @@ const Sidebar: React.FC = () => {
         {/* Tags Component */}
         <Tags maxTags={20} />
         
-        {/* Show Admin Links only if we're in WordPress admin */}
-        {window.location.href.includes('/wp-admin') && (
-          <AdminLinks isAuthenticated={true} />
+        {/* Show Admin Links only if authenticated */}
+        {isAuthenticated && (
+          <AdminLinks isAuthenticated={isAuthenticated} adminUrl={adminUrl} />
         )}
       </Box>
     </Paper>

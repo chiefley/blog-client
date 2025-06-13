@@ -108,15 +108,6 @@ export class Dna {
     return true;
   }
 
-  private childCount = (aGene: Gene): number => {
-    let count = 0;
-    for (let g of this.genes) {
-      if (g.parent === aGene) {
-        count++;
-      }
-    }
-    return count;
-  }
 
   // Return an array of food stops.
   public stops = (): Point[] => {
@@ -244,11 +235,4 @@ export class Dna {
     return true;
   }
 
-  private reportDna = (msg: string): void => {
-    console.log("");
-    for (let g of this.genes) {
-      const parentIndex = g.parent ? this.genes.indexOf(g.parent) : -1;
-      console.log(`${msg}: gix: ${this.genes.indexOf(g)}, pix: ${parentIndex}`);
-    }
-  };
 }
