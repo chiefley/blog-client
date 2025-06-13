@@ -15,6 +15,7 @@ import {
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EditIcon from '@mui/icons-material/Edit';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import { getPostBySlug, getPostById } from '../../services/wordpressApi';
 import { WordPressPost } from '../../types/interfaces';
 import LazyImage from '../common/LazyImage';
@@ -27,6 +28,7 @@ const PostDetail: React.FC = () => {
     const [post, setPost] = useState<WordPressPost | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [refreshing, setRefreshing] = useState(false);
 
     useEffect(() => {
         const fetchPost = async () => {
@@ -49,7 +51,7 @@ const PostDetail: React.FC = () => {
                     }
                 } else if (slug) {
                     // Fetch by slug (for published posts)
-                    postData = await getPostBySlug(slug, true);
+                    postData = await getPostBySlug(slug);
                 }
                 
                 if (postData) {
@@ -67,6 +69,33 @@ const PostDetail: React.FC = () => {
 
         fetchPost();
     }, [slug, id]);
+
+    const handleRefresh = async () => {
+        if (!slug && !id) return;
+        
+        setRefreshing(true);
+        
+        try {
+            let postData = null;
+            
+            if (id) {
+                const postId = parseInt(id, 10);
+                if (!isNaN(postId)) {
+                    postData = await getPostById(postId, true);
+                }
+            } else if (slug) {
+                postData = await getPostBySlug(slug, true);
+            }
+            
+            if (postData) {
+                setPost(postData);
+            }
+        } catch (err) {
+            console.error('Error refreshing post:', err);
+        } finally {
+            setRefreshing(false);
+        }
+    };
 
     if (loading) {
         return (
@@ -197,13 +226,15 @@ const PostDetail: React.FC = () => {
                         {/* Post Status Chip */}
                         {post.status !== 'publish' && (
                             <Chip
-                                icon={post.status === 'draft' ? <EditIcon fontSize="small" /> : <VisibilityOffIcon fontSize="small" />}
+                                icon={refreshing ? <CircularProgress size={16} color="inherit" /> : (post.status === 'draft' ? <EditIcon fontSize="small" /> : <VisibilityOffIcon fontSize="small" />)}
                                 label={
-                                    post.status === 'draft' ? 'Draft' :
-                                    post.status === 'private' ? 'Private' :
-                                    post.status === 'pending' ? 'Pending Review' :
-                                    post.status === 'future' ? 'Scheduled' : 
-                                    'Published'
+                                    refreshing ? 'Refreshing...' : (
+                                        post.status === 'draft' ? 'Draft' :
+                                        post.status === 'private' ? 'Private' :
+                                        post.status === 'pending' ? 'Pending Review' :
+                                        post.status === 'future' ? 'Scheduled' : 
+                                        'Published'
+                                    )
                                 }
                                 size="small"
                                 color={
@@ -212,10 +243,15 @@ const PostDetail: React.FC = () => {
                                     post.status === 'pending' ? 'info' :
                                     'secondary'
                                 }
+                                clickable={post.status === 'draft'}
+                                onClick={post.status === 'draft' ? handleRefresh : undefined}
+                                onDelete={post.status === 'draft' && !refreshing ? handleRefresh : undefined}
+                                deleteIcon={<RefreshIcon fontSize="small" />}
                                 sx={{ 
                                     borderRadius: 1,
                                     fontWeight: 'bold',
-                                    mr: 1
+                                    mr: 1,
+                                    cursor: post.status === 'draft' ? 'pointer' : 'default'
                                 }}
                             />
                         )}
