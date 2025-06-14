@@ -127,22 +127,50 @@ npm test                # Run Vitest tests
    ```
 5. Store credentials in `.env.local` (never commit)
 
-## Custom Shortcode System
-Embed React components in WordPress posts:
+## Shortcode System (Client-Side Parsing)
+Direct parsing of WordPress shortcodes in React - no server-side translation needed.
+
+### Supported Shortcodes
 ```
 [genetic-algorithm mutation-level="5" with-badger="true"]
+[dawkins-weasel]
+[su_box title="Info" style="glass"]Content here[/su_box]
+[su_tabs][su_tab title="Tab 1"]Content[/su_tab][/su_tabs]
+[su_youtube url="https://youtube.com/watch?v=..." responsive="yes"]
 ```
-- **WordPress**: Shortcode → HTML marker with data attributes
-- **React**: ComponentRegistry parses and renders components
-- **Registration**: Add to `COMPONENT_REGISTRY` in `ComponentRegistry.tsx`
-- **PHP**: Add shortcode handler to WordPress functions.php
+
+### Architecture
+- **Parser**: `src/utils/shortcodeParser.ts` - Handles nested shortcodes
+- **Registry**: `src/components/shortcodes/ShortcodeRegistry.tsx` - Maps names to components
+- **Renderer**: `src/components/shortcodes/ShortcodeRenderer.tsx` - Renders parsed content
+- **Components**: `src/components/shortcodes/su/` - Individual shortcode implementations
+
+### Adding New Shortcodes
+1. Create component in `src/components/shortcodes/su/`
+2. Add to `SHORTCODE_REGISTRY` in `ShortcodeRegistry.tsx`
+3. Component receives `attributes` and `children` props
+
+### Implemented Shortcodes Ultimate Components
+- `su_box` - Styled content boxes
+- `su_button` - Interactive buttons with routing
+- `su_tabs/su_tab` - Tabbed content
+- `su_youtube` - Responsive video embeds
+- `su_highlight` - Text highlighting
+- `su_quote` - Blockquotes with citations
+- `su_divider` - Section dividers
+
+### Pattern Support
+- Self-closing: `[shortcode /]`
+- With attributes: `[shortcode attr="value"]`
+- With content: `[shortcode]content[/shortcode]`
+- Nested: `[outer][inner]content[/inner][/outer]`
 
 ## Common Tasks
 - Adding a new blog: Update `multisiteConfig.ts`
 - Creating components: Follow existing patterns in components folder
 - API changes: Update interfaces in `types/interfaces.ts`
 - Deploy issues: Check FTP credentials in `.env`
-- New shortcode: Add to both WordPress and ComponentRegistry
+- New shortcode: Add component and register in `ShortcodeRegistry.tsx`
 
 ## Import Additional Configs
 @src/components/CLAUDE.md

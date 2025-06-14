@@ -21,7 +21,7 @@ import { WordPressPost } from '../../types/interfaces';
 import LazyImage from '../common/LazyImage';
 import { getResponsiveImageUrl } from '../../utils/imageUtils';
 import { Comments } from '../comments';
-import { parseEmbeddedComponents } from '../embedded/ComponentRegistry';
+import { ShortcodeRenderer } from '../shortcodes/ShortcodeRenderer';
 
 const PostDetail: React.FC = () => {
     const { slug, id } = useParams<{ slug?: string; id?: string }>();
@@ -361,7 +361,7 @@ const PostDetail: React.FC = () => {
                         mb: 0.5
                     }
                 }}>
-                    {parseEmbeddedComponents(content)}
+                    <ShortcodeRenderer content={content} />
                 </Box>
 
                 {/* Tags at the bottom - keep for reference */}
