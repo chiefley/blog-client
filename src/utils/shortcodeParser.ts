@@ -8,11 +8,20 @@ export interface ShortcodeNode {
   raw?: string;
 }
 
+// Cache for parsed attributes to avoid re-parsing identical attribute strings
+const attributeCache = new Map<string, Record<string, any>>();
+
 /**
  * Parse shortcode attributes from string
  * Handles both quoted and unquoted values
  */
 export function parseAttributes(attrString: string): Record<string, any> {
+  // Check cache first
+  const cached = attributeCache.get(attrString);
+  if (cached) {
+    return cached;
+  }
+  
   const attrs: Record<string, any> = {};
   
   // Match various attribute patterns
@@ -42,111 +51,191 @@ export function parseAttributes(attrString: string): Record<string, any> {
     }
   }
   
+  // Cache the result (limit cache size to prevent memory issues)
+  if (attributeCache.size > 1000) {
+    attributeCache.clear();
+  }
+  attributeCache.set(attrString, attrs);
+  
   return attrs;
 }
 
+// Cache for small content strings to avoid re-parsing
+const contentCache = new Map<string, ShortcodeNode[]>();
+
 /**
- * Parse content into shortcode nodes
- * Handles nested shortcodes with proper open/close tag matching
+ * Parse content into shortcode nodes using an optimized algorithm
+ * that properly handles nested shortcodes
  */
 export function parseShortcodes(content: string): ShortcodeNode[] {
+  // Return empty array for empty content
+  if (!content) {
+    return [];
+  }
+  
+  // Check cache for small content (avoid caching large content)
+  if (content.length < 1000) {
+    const cached = contentCache.get(content);
+    if (cached) {
+      return cached;
+    }
+  }
+  
   const nodes: ShortcodeNode[] = [];
   
-  // Regex for matching shortcodes (opening, self-closing, or closing)
+  // First, find all shortcode matches with their positions
   const shortcodeRegex = /\[(\/)?([\w-]+)([^\]]*?)(\/)?\]/g;
+  const matches: Array<{
+    fullMatch: string;
+    isClosing: boolean;
+    isSelfClosing: boolean;
+    tagName: string;
+    attributes: string;
+    startPos: number;
+    endPos: number;
+  }> = [];
   
-  let lastIndex = 0;
   let match;
-  const openTags: { name: string; attributes: Record<string, any>; startIndex: number }[] = [];
-  
   while ((match = shortcodeRegex.exec(content)) !== null) {
-    const [fullMatch, closingSlash, tagName, attributes, selfClosing] = match;
-    const matchIndex = match.index;
+    matches.push({
+      fullMatch: match[0],
+      isClosing: !!match[1],
+      isSelfClosing: !!match[4],
+      tagName: match[2],
+      attributes: match[3] || '',
+      startPos: match.index,
+      endPos: match.index + match[0].length
+    });
+  }
+  
+  // If no matches, return the entire content as text
+  if (matches.length === 0) {
+    if (content) {
+      nodes.push({ type: 'text', raw: content });
+    }
+    return nodes;
+  }
+  
+  // Process matches to build the tree structure
+  let currentPos = 0;
+  let i = 0;
+  
+  while (i < matches.length) {
+    const match = matches[i];
     
     // Add any text before this match
-    if (matchIndex > lastIndex) {
-      const text = content.substring(lastIndex, matchIndex);
-      if (text.trim()) {
+    if (match.startPos > currentPos) {
+      const text = content.substring(currentPos, match.startPos);
+      if (text) {
         nodes.push({ type: 'text', raw: text });
       }
     }
     
-    if (closingSlash) {
-      // Closing tag
-      const openTagIndex = openTags.findIndex(tag => tag.name === tagName);
-      if (openTagIndex !== -1) {
-        // Found matching opening tag
-        const openTag = openTags[openTagIndex];
-        openTags.splice(openTagIndex, 1);
-        
-        // Get content between opening and closing tags
-        const innerContent = content.substring(openTag.startIndex, matchIndex);
+    if (match.isSelfClosing) {
+      // Self-closing shortcode
+      nodes.push({
+        type: 'shortcode',
+        name: match.tagName,
+        attributes: parseAttributes(match.attributes),
+        content: [],
+        raw: match.fullMatch
+      });
+      currentPos = match.endPos;
+      i++;
+    } else if (!match.isClosing) {
+      // Opening tag - find its matching closing tag
+      const closingIndex = findMatchingClosingTag(matches, i);
+      
+      if (closingIndex === -1) {
+        // No matching closing tag, treat as self-closing
+        nodes.push({
+          type: 'shortcode',
+          name: match.tagName,
+          attributes: parseAttributes(match.attributes),
+          content: [],
+          raw: match.fullMatch
+        });
+        currentPos = match.endPos;
+        i++;
+      } else {
+        // Found matching closing tag
+        const closingMatch = matches[closingIndex];
+        const innerContent = content.substring(match.endPos, closingMatch.startPos);
         const innerNodes = parseShortcodes(innerContent);
         
         nodes.push({
           type: 'shortcode',
-          name: openTag.name,
-          attributes: openTag.attributes,
+          name: match.tagName,
+          attributes: parseAttributes(match.attributes),
           content: innerNodes,
-          raw: content.substring(openTag.startIndex - fullMatch.length, match.index + fullMatch.length)
+          raw: content.substring(match.startPos, closingMatch.endPos)
         });
+        
+        currentPos = closingMatch.endPos;
+        // Skip all matches up to and including the closing tag
+        i = closingIndex + 1;
       }
-    } else if (selfClosing) {
-      // Self-closing shortcode
-      nodes.push({
-        type: 'shortcode',
-        name: tagName,
-        attributes: parseAttributes(attributes),
-        content: [],
-        raw: fullMatch
-      });
     } else {
-      // Opening tag - check if it has a closing tag
-      const closingTagRegex = new RegExp(`\\[\\/${tagName}\\]`, 'g');
-      closingTagRegex.lastIndex = shortcodeRegex.lastIndex;
-      
-      if (closingTagRegex.test(content)) {
-        // Has closing tag, track it
-        openTags.push({
-          name: tagName,
-          attributes: parseAttributes(attributes),
-          startIndex: shortcodeRegex.lastIndex
-        });
-      } else {
-        // No closing tag, treat as self-closing
-        nodes.push({
-          type: 'shortcode',
-          name: tagName,
-          attributes: parseAttributes(attributes),
-          content: [],
-          raw: fullMatch
-        });
-      }
+      // Orphaned closing tag - skip it
+      currentPos = match.endPos;
+      i++;
     }
-    
-    lastIndex = shortcodeRegex.lastIndex;
   }
   
   // Add any remaining text
-  if (lastIndex < content.length) {
-    const text = content.substring(lastIndex);
-    if (text.trim()) {
+  if (currentPos < content.length) {
+    const text = content.substring(currentPos);
+    if (text) {
       nodes.push({ type: 'text', raw: text });
     }
   }
   
-  // Handle any unclosed tags
-  for (const openTag of openTags) {
-    nodes.push({
-      type: 'shortcode',
-      name: openTag.name,
-      attributes: openTag.attributes,
-      content: [],
-      raw: `[${openTag.name}${Object.entries(openTag.attributes).map(([k, v]) => ` ${k}="${v}"`).join('')}]`
-    });
+  // Cache small content results
+  if (content.length < 1000) {
+    if (contentCache.size > 100) {
+      contentCache.clear();
+    }
+    contentCache.set(content, nodes);
   }
   
   return nodes;
+}
+
+/**
+ * Find the matching closing tag for an opening tag
+ * Handles nested tags of the same type
+ */
+function findMatchingClosingTag(
+  matches: Array<{ isClosing: boolean; tagName: string; isSelfClosing: boolean }>,
+  openIndex: number
+): number {
+  const openTag = matches[openIndex];
+  let depth = 1;
+  
+  for (let i = openIndex + 1; i < matches.length; i++) {
+    const match = matches[i];
+    
+    if (match.tagName === openTag.tagName) {
+      if (match.isClosing) {
+        depth--;
+        if (depth === 0) {
+          return i;
+        }
+      } else if (!match.isSelfClosing) {
+        depth++;
+      }
+    }
+  }
+  
+  return -1;
+}
+
+/**
+ * Clear all caches (useful for testing or memory management)
+ */
+export function clearShortcodeCaches(): void {
+  attributeCache.clear();
+  contentCache.clear();
 }
 
 /**

@@ -72,9 +72,17 @@ export const SHORTCODE_REGISTRY: Record<string, ComponentType<ShortcodeComponent
 /**
  * Loading fallback for lazy loaded components
  */
-export const ShortcodeLoadingFallback: React.FC = () => (
-  <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
-    <CircularProgress size={24} />
+export const ShortcodeLoadingFallback: React.FC<{ inline?: boolean }> = ({ inline = false }) => (
+  <Box 
+    component={inline ? 'span' : 'div'}
+    sx={{ 
+      display: inline ? 'inline-flex' : 'flex', 
+      justifyContent: 'center', 
+      p: inline ? 0.5 : 2,
+      verticalAlign: inline ? 'middle' : undefined
+    }}
+  >
+    <CircularProgress size={inline ? 16 : 24} />
   </Box>
 );
 
@@ -99,14 +107,22 @@ export const UnknownShortcode: React.FC<{ name: string }> = ({ name }) => (
 );
 
 /**
+ * List of inline shortcodes that should preserve text flow
+ */
+const INLINE_SHORTCODES = ['su_highlight', 'su_tooltip', 'su_label', 'su_dropcap'];
+
+/**
  * Wrapper for shortcode components with error boundary and loading state
  */
 export const ShortcodeWrapper: React.FC<{
   component: ComponentType<ShortcodeComponentProps>;
   props: ShortcodeComponentProps;
-}> = ({ component: Component, props }) => {
+  shortcodeName?: string;
+}> = ({ component: Component, props, shortcodeName }) => {
+  const isInline = shortcodeName && INLINE_SHORTCODES.includes(shortcodeName);
+  
   return (
-    <Suspense fallback={<ShortcodeLoadingFallback />}>
+    <Suspense fallback={<ShortcodeLoadingFallback inline={isInline} />}>
       <Component {...props} />
     </Suspense>
   );

@@ -10,6 +10,11 @@ const SuHighlight: React.FC<ShortcodeComponentProps> = ({ attributes, children }
     class: className,
   } = attributes || {};
 
+  // Debug logging
+  if (process.env.NODE_ENV === 'development') {
+    console.log('SuHighlight rendering:', { attributes, children, background, color });
+  }
+
   return (
     <Box
       component="span"
