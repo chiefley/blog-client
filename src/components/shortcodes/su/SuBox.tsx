@@ -11,6 +11,11 @@ const SuBox: React.FC<ShortcodeComponentProps> = ({ attributes, children }) => {
     radius = '3',
     class: className,
   } = attributes || {};
+  
+  // Check if we're in dark mode (you might want to get this from your theme context)
+  const prefersDarkMode = typeof window !== 'undefined' && 
+    window.matchMedia && 
+    window.matchMedia('(prefers-color-scheme: dark)').matches;
 
   // Map SU box styles to MUI variants
   const getBoxStyle = () => {
@@ -21,10 +26,23 @@ const SuBox: React.FC<ShortcodeComponentProps> = ({ attributes, children }) => {
           border: 'none',
         };
       case 'glass':
-        return {
+        // Better glass effect that works on both light and dark backgrounds
+        return prefersDarkMode ? {
+          // Dark mode glass
           bgcolor: 'rgba(255, 255, 255, 0.1)',
-          backdropFilter: 'blur(10px)',
+          backdropFilter: 'blur(10px) saturate(150%)',
+          WebkitBackdropFilter: 'blur(10px) saturate(150%)',
           border: '1px solid rgba(255, 255, 255, 0.2)',
+          boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.2)',
+          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)',
+        } : {
+          // Light mode glass - subtle tinted glass effect
+          bgcolor: 'rgba(255, 255, 255, 0.7)',
+          backdropFilter: 'blur(10px) saturate(150%)',
+          WebkitBackdropFilter: 'blur(10px) saturate(150%)',
+          border: '1px solid rgba(0, 0, 0, 0.1)',
+          boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.1)',
+          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0.3) 100%)',
         };
       case 'bubbles':
         return {

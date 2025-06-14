@@ -122,11 +122,11 @@ node scripts/test-shortcode.mjs "[button]Click[/button]"
 ## Currently Implemented Shortcodes
 
 ### Shortcodes Ultimate Components
-- `su_box` - Styled content boxes
+- `su_box` - Styled content boxes (includes glass effect with backdrop blur)
 - `su_button` - Customizable buttons
-- `su_tabs`/`su_tab` - Tabbed content
+- `su_tabs`/`su_tab` - Tabbed content (special container handling)
 - `su_youtube` - YouTube embeds
-- `su_highlight` - Text highlighting
+- `su_highlight` - Text highlighting (inline rendering)
 - `su_divider` - Content dividers
 - `su_quote` - Blockquotes
 - `su_accordion`/`su_spoiler` - Collapsible content
@@ -135,6 +135,43 @@ node scripts/test-shortcode.mjs "[button]Click[/button]"
 ### Custom Shortcodes
 - `genetic-algorithm` - Weasel evolution simulation
 - `dawkins-weasel` - Dawkins' weasel program
+
+## Important Implementation Details
+
+### Container Shortcodes (e.g., Tabs)
+Container shortcodes like `su_tabs` that need to process their child shortcodes require special handling:
+
+1. The renderer wraps `su_tab` content in a div with data attributes:
+```jsx
+<div data-shortcode="su_tab" data-title="Tab Title" data-anchor="tab-anchor">
+  {tabContent}
+</div>
+```
+
+2. The parent component (`SuTabs`) extracts these marked divs to build the UI:
+```typescript
+React.Children.forEach(children, (child) => {
+  if (child.type === 'div' && child.props['data-shortcode'] === 'su_tab') {
+    // Extract tab data
+  }
+});
+```
+
+### Inline vs Block Rendering
+The renderer intelligently handles text nodes:
+- Uses `<span>` for inline content (no block-level HTML)
+- Uses `<div>` for block content (contains `<p>`, `<div>`, etc.)
+- Inline shortcodes (like `su_highlight`) are listed in `INLINE_SHORTCODES`
+
+### Performance Optimizations
+- **Attribute Caching**: Parsed attributes are cached (up to 1000 entries)
+- **Content Caching**: Small content (<1KB) is cached (up to 100 entries)
+- **Cache Clearing**: Use `clearShortcodeCaches()` when needed
+
+### Browser Compatibility Notes
+- Glass box effect uses `backdrop-filter` (Chrome, Edge, Safari, Firefox 103+)
+- Includes `-webkit-backdrop-filter` for Safari support
+- Fallbacks provided for unsupported browsers
 
 ## Best Practices
 

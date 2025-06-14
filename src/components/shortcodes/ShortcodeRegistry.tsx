@@ -49,7 +49,7 @@ export const SHORTCODE_REGISTRY: Record<string, ComponentType<ShortcodeComponent
   
   // Shortcodes Ultimate components
   'su_tabs': SuTabs,
-  'su_tab': SuTabs, // Will be handled by parent
+  'su_tab': SuTabs, // Special handling in renderer
   'su_accordion': SuAccordion,
   'su_spoiler': SuAccordion, // Will be handled by parent
   'su_box': SuBox,

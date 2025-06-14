@@ -33,7 +33,28 @@ function renderShortcodeNode(node: ShortcodeNode, index: number): React.ReactNod
     
     if (Component) {
       try {
-        // Render children if they exist
+        // Special handling for su_tab - wrap with metadata
+        if (node.name === 'su_tab') {
+          const tabContent = node.content?.map((child, childIndex) => {
+            if (typeof child === 'string') {
+              return child;
+            }
+            return renderShortcodeNode(child, childIndex);
+          });
+          
+          return (
+            <div
+              key={`tab-${index}`}
+              data-shortcode="su_tab"
+              data-title={node.attributes?.title || ''}
+              data-anchor={node.attributes?.anchor || ''}
+            >
+              {tabContent}
+            </div>
+          );
+        }
+        
+        // Regular shortcode rendering
         const children = node.content?.map((child, childIndex) => {
           if (typeof child === 'string') {
             return child;
