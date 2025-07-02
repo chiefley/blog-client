@@ -6,7 +6,6 @@ import {
   simpleAuthVerify,
   simpleAuthRefresh,
   getSimpleAuthToken,
-  getSimpleAuthUser,
   createSimpleAuthHeader,
   SimpleAuthUser 
 } from '../services/simpleAuth';

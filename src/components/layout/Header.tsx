@@ -19,8 +19,11 @@ import MenuIcon from '@mui/icons-material/Menu';
 import CloseIcon from '@mui/icons-material/Close';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import EditIcon from '@mui/icons-material/Edit';
+import Brightness4Icon from '@mui/icons-material/Brightness4';
+import Brightness7Icon from '@mui/icons-material/Brightness7';
 import { useSiteInfo } from '../../contexts/SiteInfoContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useAppTheme } from '../../contexts/ThemeContext';
 import LoginModal from '../common/LoginModal';
 
 // Props for the Header component
@@ -34,6 +37,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, sidebarOpen }) => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { siteInfo, loading } = useSiteInfo();
   const { user, isAuthenticated, logout } = useAuth();
+  const { mode, toggleTheme } = useAppTheme();
   
   // Debug logging
   console.log('Header render - isAuthenticated:', isAuthenticated, 'user:', user);
@@ -208,6 +212,16 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, sidebarOpen }) => {
               </Button>
             ))}
           </Box>
+
+          {/* Dark mode toggle */}
+          <IconButton
+            sx={{ ml: 1 }}
+            onClick={toggleTheme}
+            color="inherit"
+            title={`Switch to ${mode === 'light' ? 'dark' : 'light'} mode`}
+          >
+            {mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
+          </IconButton>
 
           {/* User menu or login button */}
           {isAuthenticated && user ? (

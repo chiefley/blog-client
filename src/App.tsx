@@ -2,10 +2,12 @@
 import React, { useState, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Box, Container, CssBaseline, Grid, useMediaQuery, useTheme, CircularProgress } from '@mui/material';
+import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
 import { Header, Sidebar } from './components/layout';
 import Footer from './components/layout/Footer';
 import { SiteInfoProvider } from './contexts/SiteInfoContext';
 import { AuthProvider } from './contexts/AuthContext';
+import { ThemeProvider, useAppTheme } from './contexts/ThemeContext';
 
 // Lazy load pages instead of importing them directly
 const Home = lazy(() => import('./pages/Home'));
@@ -28,7 +30,8 @@ const PageLoader = () => (
   </Box>
 );
 
-const App: React.FC = () => {
+// Main app content component
+const AppContent: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -38,12 +41,8 @@ const App: React.FC = () => {
   };
 
   return (
-    <Router>
-      <AuthProvider>
-        <SiteInfoProvider>
-          <CssBaseline />
-          <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-            <Header onMenuClick={toggleSidebar} sidebarOpen={sidebarOpen} />
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <Header onMenuClick={toggleSidebar} sidebarOpen={sidebarOpen} />
 
             <Box component="main" sx={{ flexGrow: 1, py: 3 }}>
               <Container maxWidth="lg">
@@ -93,11 +92,35 @@ const App: React.FC = () => {
               </Container>
             </Box>
 
-            <Footer />
-          </Box>
+      <Footer />
+    </Box>
+  );
+};
+
+// Main App component with all providers
+const App: React.FC = () => {
+  return (
+    <Router>
+      <ThemeProvider>
+        <AppThemeWrapper />
+      </ThemeProvider>
+    </Router>
+  );
+};
+
+// Wrapper component to use the theme from our custom ThemeProvider
+const AppThemeWrapper: React.FC = () => {
+  const { theme } = useAppTheme();
+  
+  return (
+    <MuiThemeProvider theme={theme}>
+      <AuthProvider>
+        <SiteInfoProvider>
+          <CssBaseline />
+          <AppContent />
         </SiteInfoProvider>
       </AuthProvider>
-    </Router>
+    </MuiThemeProvider>
   );
 };
 
