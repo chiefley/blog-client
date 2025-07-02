@@ -66,7 +66,7 @@ describe('parseShortcodes', () => {
     expect(nodes[0].name).toBe('box');
     expect(nodes[0].attributes).toEqual({ title: 'Info' });
     expect(nodes[0].content).toHaveLength(1);
-    expect(nodes[0].content[0]).toEqual({
+    expect(nodes[0].content?.[0]).toEqual({
       type: 'text',
       raw: 'This is content'
     });
@@ -80,15 +80,15 @@ describe('parseShortcodes', () => {
     expect(nodes[0].name).toBe('tabs');
     expect(nodes[0].content).toHaveLength(2);
     
-    const tab1 = nodes[0].content[0];
-    expect(tab1.type).toBe('shortcode');
-    expect(tab1.name).toBe('tab');
-    expect(tab1.attributes).toEqual({ title: 'Tab1' });
+    const tab1 = nodes[0].content?.[0];
+    expect(tab1 && typeof tab1 === 'object' && 'type' in tab1 && tab1.type).toBe('shortcode');
+    expect(tab1 && typeof tab1 === 'object' && 'name' in tab1 && tab1.name).toBe('tab');
+    expect(tab1 && typeof tab1 === 'object' && 'attributes' in tab1 && tab1.attributes).toEqual({ title: 'Tab1' });
     
-    const tab2 = nodes[0].content[1];
-    expect(tab2.type).toBe('shortcode');
-    expect(tab2.name).toBe('tab');
-    expect(tab2.attributes).toEqual({ title: 'Tab2' });
+    const tab2 = nodes[0].content?.[1];
+    expect(tab2 && typeof tab2 === 'object' && 'type' in tab2 && tab2.type).toBe('shortcode');
+    expect(tab2 && typeof tab2 === 'object' && 'name' in tab2 && tab2.name).toBe('tab');
+    expect(tab2 && typeof tab2 === 'object' && 'attributes' in tab2 && tab2.attributes).toEqual({ title: 'Tab2' });
   });
 
   it('should handle mixed content with text and shortcodes', () => {
@@ -119,9 +119,11 @@ describe('parseShortcodes', () => {
     const nodes = parseShortcodes(content);
     
     expect(nodes[0].name).toBe('outer');
-    expect(nodes[0].content[0].name).toBe('middle');
-    expect(nodes[0].content[0].content[0].name).toBe('inner');
-    expect(nodes[0].content[0].content[0].content[0]).toEqual({
+    expect(nodes[0].content?.[0] && typeof nodes[0].content[0] === 'object' && 'name' in nodes[0].content[0] && nodes[0].content[0].name).toBe('middle');
+    const middleNode = nodes[0].content?.[0];
+    expect(middleNode && typeof middleNode === 'object' && 'content' in middleNode && middleNode.content?.[0] && typeof middleNode.content[0] === 'object' && 'name' in middleNode.content[0] && middleNode.content[0].name).toBe('inner');
+    const innerNode = middleNode && typeof middleNode === 'object' && 'content' in middleNode && middleNode.content?.[0];
+    expect(innerNode && typeof innerNode === 'object' && 'content' in innerNode && innerNode.content?.[0]).toEqual({
       type: 'text',
       raw: 'Deep content'
     });
@@ -139,8 +141,9 @@ describe('parseShortcodes', () => {
     const nodes = parseShortcodes(content);
     
     expect(nodes[0].name).toBe('su_tabs');
-    expect(nodes[0].content[0].name).toBe('su_tab');
-    expect(nodes[0].content[0].attributes.title).toBe('General');
+    expect(nodes[0].content?.[0] && typeof nodes[0].content[0] === 'object' && 'name' in nodes[0].content[0] && nodes[0].content[0].name).toBe('su_tab');
+    const tabNode = nodes[0].content?.[0];
+    expect(tabNode && typeof tabNode === 'object' && 'attributes' in tabNode && tabNode.attributes?.title).toBe('General');
   });
 
   it('should handle empty content', () => {

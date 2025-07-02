@@ -30,9 +30,10 @@ npm test                # Run Vitest tests
 ## WordPress API Integration
 - Base API URL: Configured in environment variables
 - Multisite paths: Defined in `src/config/multisiteConfig.ts`
-- Authentication: JWT tokens stored in localStorage
+- Authentication: Simple token-based auth (replaced JWT)
 - Draft posts: Only visible when authenticated
 - API service: `src/services/wordpressApi.ts`
+- Auth service: `src/services/simpleAuth.ts`
 
 ## Project Structure Patterns
 - **Components**: `src/components/` - Organized by feature (posts, comments, layout, common)
@@ -97,9 +98,9 @@ npm test                # Run Vitest tests
 
 ## Security Notes
 - Never commit `.env` files
-- JWT tokens expire and require re-authentication
-- API endpoints use WordPress nonce verification
-- CORS configured on WordPress side
+- Simple Auth tokens expire after 7 days (configurable)
+- Tokens stored in database with automatic cleanup
+- CORS handled by Simple Auth plugin
 
 ## WordPress Configuration
 - **Hosted at**: https://wpcms.thechief.com (Hostinger Premium Plan)
@@ -112,20 +113,22 @@ npm test                # Run Vitest tests
 ### WordPress Plugins
 - **API Enhancement**: Better REST API Featured Image, ACF to REST API, WP REST API Controller
 - **Performance**: LiteSpeed Cache, WP REST Cache, Image Optimization Service by Optimole
-- **Security**: JWT Authentication for WP-API, User Role Editor, Enable CORS
+- **Security**: Simple Auth for REST API (custom plugin), User Role Editor
 - **Menu/Content**: WP-REST-API V2 Menus, Advanced Custom Fields, Shortcodes Ultimate
 - **Hosting**: Hostinger Tools, Hostinger Easy Onboarding
 
 ### API User Setup
 1. Create WordPress user with "Subscriber" role
-2. Use User Role Editor plugin to create custom "API User" role
-3. Grant only: `read`, `read_posts`, `read_private_posts` capabilities
-4. Configure JWT in `.htaccess` and `wp-config.php`:
-   ```php
-   define('JWT_AUTH_SECRET_KEY', 'your-secret-key');
-   define('JWT_AUTH_CORS_ENABLE', true);
-   ```
+2. Use User Role Editor plugin to create custom "API User" role (optional)
+3. Grant capabilities: `read`, `read_posts`, `read_private_posts`
+4. Install and activate Simple Auth plugin
 5. Store credentials in `.env.local` (never commit)
+
+### Authentication Endpoints
+- Login: `POST /wp-json/simple-auth/v1/login`
+- Verify: `GET /wp-json/simple-auth/v1/verify`
+- Refresh: `POST /wp-json/simple-auth/v1/refresh`
+- Logout: `POST /wp-json/simple-auth/v1/logout`
 
 ## Shortcode System (Client-Side Parsing)
 Direct parsing of WordPress shortcodes in React - no server-side translation needed.

@@ -13,7 +13,14 @@ const apiUrl = `${API_BASE_URL}${blogPath ? `/${blogPath}` : ''}/wp-json/wp/v2`;
 ```
 
 ## Authentication Pattern
+
+### Simple Auth (Current)
 ```typescript
+// Import from SimpleAuthContext or simpleAuth service
+import { createAuthHeader } from '../contexts/SimpleAuthContext';
+// or
+import { createSimpleAuthHeader } from '../services/simpleAuth';
+
 // Create auth headers
 const headers = createAuthHeader();
 
@@ -24,6 +31,8 @@ const response = await fetch(url, {
     'Content-Type': 'application/json',
   }
 });
+
+// Headers format: { Authorization: 'Bearer <token>' }
 ```
 
 ## API Endpoints
@@ -68,12 +77,25 @@ fetchTags()
 ```typescript
 // Get site information
 fetchSiteInfo()
+```
 
+### Authentication (Simple Auth)
+```typescript
 // Login
-login(username: string, password: string)
+simpleAuthLogin(username: string, password: string)
+// Returns: { success, token, user, expires_in }
 
 // Verify token
-verifyToken(token: string)
+simpleAuthVerify()
+// Returns: user object or null
+
+// Refresh token
+simpleAuthRefresh()
+// Returns: new token or null
+
+// Logout
+simpleAuthLogout()
+// Clears token and makes logout request
 ```
 
 ## Error Handling Pattern
@@ -100,7 +122,8 @@ All API responses use TypeScript interfaces from `types/interfaces.ts`:
 - `Tag`: Tag taxonomy
 - `Comment`: Comment data
 - `SiteInfo`: Site metadata
-- `AuthResponse`: Login response
+- `SimpleAuthResponse`: Login response with token and user data
+- `SimpleAuthUser`: User object with roles and capabilities
 
 ## Featured Image Handling
 WordPress posts include featured images in multiple formats:
@@ -169,3 +192,9 @@ rest.get('*/wp-json/wp/v2/posts', (req, res, ctx) => {
 - Implement client-side caching
 - Only request needed fields with `_fields` parameter
 - Use conditional requests with ETags when available
+
+## Authentication Migration Notes
+- **Old System**: JWT Authentication for WP-API plugin
+- **New System**: Simple Auth custom plugin (token-based)
+- **Migration**: See `MIGRATION_TO_SIMPLE_AUTH.md` for details
+- **Benefits**: Simpler configuration, better reliability, automatic CORS handling

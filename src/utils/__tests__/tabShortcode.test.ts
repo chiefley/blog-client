@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseShortcodes } from '../shortcodeParser';
+import { parseShortcodes, ShortcodeNode } from '../shortcodeParser';
 
 describe('tab shortcode parsing', () => {
   it('should parse tab structure from WordPress content', () => {
@@ -22,17 +22,17 @@ Content for morse generator tab
     expect(tabsContent).toHaveLength(5); // text + tab + text + tab + text (whitespace)
     
     // Find the actual tab nodes
-    const tabNodes = tabsContent.filter(n => n.type === 'shortcode' && n.name === 'su_tab');
+    const tabNodes = tabsContent ? tabsContent.filter((n): n is ShortcodeNode => typeof n === 'object' && n.type === 'shortcode' && n.name === 'su_tab') : [];
     expect(tabNodes).toHaveLength(2);
     
     // Check first tab
-    expect(tabNodes[0].attributes).toEqual({
+    expect(tabNodes[0]?.attributes).toEqual({
       title: 'Preamble',
       anchor: 'preamble'
     });
     
     // Check second tab
-    expect(tabNodes[1].attributes).toEqual({
+    expect(tabNodes[1]?.attributes).toEqual({
       title: 'Morse Generator',
       anchor: 'morsegenerator'
     });
@@ -49,13 +49,13 @@ Content for morse generator tab
 
     const nodes = parseShortcodes(content);
     const tabsNode = nodes[0];
-    const tabContent = tabsNode.content.find(n => n.type === 'shortcode' && n.name === 'su_tab');
+    const tabContent = tabsNode.content?.find((n): n is ShortcodeNode => typeof n === 'object' && n.type === 'shortcode' && n.name === 'su_tab');
     
     expect(tabContent).toBeDefined();
-    expect(tabContent.content.length).toBeGreaterThan(0);
+    expect(tabContent?.content?.length).toBeGreaterThan(0);
     
     // Should have text and nested shortcodes
-    const nestedShortcodes = tabContent.content.filter(n => n.type === 'shortcode');
+    const nestedShortcodes = tabContent?.content?.filter((n): n is ShortcodeNode => typeof n === 'object' && n.type === 'shortcode') || [];
     expect(nestedShortcodes.length).toBe(2); // highlight and button
   });
 });

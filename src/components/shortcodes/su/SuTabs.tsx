@@ -26,7 +26,7 @@ function TabPanel(props: TabPanelProps) {
 }
 
 // Special component for individual tabs
-export const SuTab: React.FC<ShortcodeComponentProps> = ({ attributes, children }) => {
+export const SuTab: React.FC<ShortcodeComponentProps> = ({ children }) => {
   // This component is only used as a marker for the parser
   // The actual rendering is handled by SuTabs
   return <>{children}</>;
@@ -75,9 +75,9 @@ const SuTabs: React.FC<ShortcodeComponentProps> = ({ attributes, children }) => 
         });
       }
       // Also check if it's wrapped in a Fragment
-      else if (child.type === React.Fragment && child.props.children) {
+      else if (child.type === React.Fragment && (child.props as any).children) {
         // Recursively check fragment children
-        React.Children.forEach(child.props.children, (fragmentChild) => {
+        React.Children.forEach((child.props as any).children, (fragmentChild) => {
           if (React.isValidElement(fragmentChild) && 
               fragmentChild.type === 'div' && 
               (fragmentChild.props as any)['data-shortcode'] === 'su_tab') {

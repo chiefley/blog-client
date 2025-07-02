@@ -13,7 +13,7 @@ describe('highlight shortcode edge cases', () => {
     
     // Check content
     expect(nodes[0].content).toHaveLength(1);
-    expect(nodes[0].content[0]).toEqual({
+    expect(nodes[0].content?.[0]).toEqual({
       type: 'text',
       raw: 'testing the highlight shortcode'
     });

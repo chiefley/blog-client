@@ -119,7 +119,7 @@ export const ShortcodeWrapper: React.FC<{
   props: ShortcodeComponentProps;
   shortcodeName?: string;
 }> = ({ component: Component, props, shortcodeName }) => {
-  const isInline = shortcodeName && INLINE_SHORTCODES.includes(shortcodeName);
+  const isInline = shortcodeName && INLINE_SHORTCODES.includes(shortcodeName) || false;
   
   return (
     <Suspense fallback={<ShortcodeLoadingFallback inline={isInline} />}>
