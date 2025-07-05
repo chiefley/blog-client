@@ -14,6 +14,12 @@
     "full": "node deploy.js full",
     "full:wa1x": "node deploy.js full wa1x.thechief.com",
     "full:applefinch": "node deploy.js full applefinch.thechief.com",
+    "deploy:unix": "node deploy-unix.js deploy",
+    "deploy:unix:wa1x": "node deploy-unix.js deploy wa1x",
+    "deploy:unix:applefinch": "node deploy-unix.js deploy applefinch",
+    "full:unix": "node deploy-unix.js full",
+    "full:unix:wa1x": "node deploy-unix.js full wa1x",
+    "full:unix:applefinch": "node deploy-unix.js full applefinch",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest"

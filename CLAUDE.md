@@ -130,6 +130,30 @@ npm test                # Run Vitest tests
 - Refresh: `POST /wp-json/simple-auth/v1/refresh`
 - Logout: `POST /wp-json/simple-auth/v1/logout`
 
+## Footnote Handling
+WordPress native footnotes (from Gutenberg editor) are enhanced client-side for better UX.
+
+### How It Works
+1. **WordPress Side**: Authors use the native footnote feature in Gutenberg editor
+2. **HTML Structure**: WordPress sends pre-rendered HTML with UUID-based IDs:
+   - Superscript: `<sup data-fn="UUID"><a href="#UUID" id="UUID-link">1</a></sup>`
+   - Footnote: `<li id="UUID">Content <a href="#UUID-link">↩</a></li>`
+3. **Client Enhancement**: 
+   - `footnoteProcessor.ts` removes inline onclick handlers
+   - PostDetail adds React-based smooth scrolling
+   - CSS adds highlighting and styling
+
+### Important Notes
+- **DO NOT** create custom footnote shortcodes - use WordPress native footnotes
+- **DO NOT** parse footnote shortcodes - they come pre-rendered as HTML
+- The system works with Gutenberg's UUID-based footnote IDs
+- IDs starting with numbers require `getElementById()` (not querySelector)
+
+### Files Involved
+- `src/utils/footnoteProcessor.ts` - Processes footnote HTML
+- `src/components/posts/PostDetail.tsx` - Handles click events and scrolling
+- CSS in footnoteProcessor provides Material-UI compatible styling
+
 ## Shortcode System (Client-Side Parsing)
 Direct parsing of WordPress shortcodes in React - no server-side translation needed.
 

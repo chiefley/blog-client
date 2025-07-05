@@ -100,15 +100,23 @@ export const getSiteInfo = async (): Promise<SiteInfo> => {
   
   // Create an array of endpoints to try in order
   const endpointsToTry = [
-    // 1. Try the public endpoint first
+    // 1. Try the custom public endpoint first (might work with proper CORS)
     {
       url: `${baseApiUrl}/wp-json/site-info/v1/public`,
-      description: 'public site-info endpoint'
+      description: 'public site-info endpoint',
+      type: 'custom'
     },
-    // 2. Try the standard WordPress API for minimal data (fallback)
+    // 2. Try the standard WordPress API root for basic info
     {
       url: `${baseApiUrl}/wp-json`,
-      description: 'WordPress root endpoint'
+      description: 'WordPress root endpoint',
+      type: 'root'
+    },
+    // 3. Try wp/v2 namespace which might have more info
+    {
+      url: `${baseApiUrl}/wp-json/wp/v2`,
+      description: 'WordPress v2 API root',
+      type: 'v2root'
     }
   ];
   
@@ -156,11 +164,23 @@ export const getSiteInfo = async (): Promise<SiteInfo> => {
         const data = await response.json();
         
         // Process response based on which endpoint succeeded
-        if (endpoint.url.includes('site-info')) {
+        if (endpoint.type === 'custom') {
           // This is our custom endpoint, return data directly
           console.log('Site info fetched successfully from custom endpoint');
           return data as SiteInfo;
-        } else if (endpoint.url.endsWith('/wp-json')) {
+        } else if (endpoint.type === 'settings') {
+          // This is the WordPress settings endpoint
+          console.log('Extracting site info from WordPress settings endpoint');
+          return {
+            name: data.title || 'XBlog',
+            description: data.description || 'A WordPress Blog',  // This is the tagline!
+            url: data.url || '/',
+            home: data.url || '/',
+            gmt_offset: data.gmt_offset || 0,
+            timezone_string: data.timezone_string || '',
+            site_logo: null
+          };
+        } else if (endpoint.type === 'root' || endpoint.type === 'v2root') {
           // This is the WordPress root endpoint, extract what we can
           console.log('Extracting site info from WordPress root endpoint');
           return {
@@ -196,6 +216,7 @@ export const getSiteInfo = async (): Promise<SiteInfo> => {
     // Get blog info from multisite config for a better fallback
     const blogPath = getCurrentBlogPath();
     let blogName = 'XBlog';
+    let blogDescription = 'A modern React blog with WordPress backend';
     
     if (blogPath) {
       // Import blogs in multisiteConfig dynamically
@@ -205,6 +226,7 @@ export const getSiteInfo = async (): Promise<SiteInfo> => {
         const blogConfig = Object.values(blogs).find(b => b.wpPath === blogPath);
         if (blogConfig) {
           blogName = blogConfig.name;
+          blogDescription = blogConfig.description || blogDescription;
           console.log(`Using multisite config for blog: ${blogName}`);
         }
       } catch (e) {
@@ -215,7 +237,7 @@ export const getSiteInfo = async (): Promise<SiteInfo> => {
     // Return a minimal fallback
     return {
       name: blogName,
-      description: 'A WordPress Blog',
+      description: blogDescription,
       url: siteUrl,
       home: siteUrl,
       gmt_offset: 0,

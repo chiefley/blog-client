@@ -22,6 +22,7 @@ import LazyImage from '../common/LazyImage';
 import { getResponsiveImageUrl } from '../../utils/imageUtils';
 import { Comments } from '../comments';
 import { ShortcodeRenderer } from '../shortcodes/ShortcodeRenderer';
+import { processFootnotes, footnoteStyles } from '../../utils/footnoteProcessor';
 
 const PostDetail: React.FC = () => {
     const { slug, id } = useParams<{ slug?: string; id?: string }>();
@@ -29,6 +30,47 @@ const PostDetail: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [refreshing, setRefreshing] = useState(false);
+
+    // Global footnote click handler
+    // IMPORTANT: This handles WordPress native footnote navigation
+    // WordPress footnotes use UUID-based IDs that start with numbers,
+    // which are invalid CSS selectors, so we must use getElementById
+    useEffect(() => {
+        const handleFootnoteClick = (e: MouseEvent) => {
+            const target = e.target as HTMLElement;
+            const link = target.closest('a');
+            
+            if (link && link.getAttribute('href')?.startsWith('#')) {
+                e.preventDefault();
+                
+                const href = link.getAttribute('href');
+                
+                if (href) {
+                    // CRITICAL: Use getElementById because Gutenberg footnote IDs 
+                    // start with numbers (UUIDs), making them invalid CSS selectors
+                    const id = href.substring(1); // Remove the #
+                    const element = document.getElementById(id);
+                    
+                    if (element) {
+                        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        
+                        // Add highlight
+                        element.classList.add('footnote-highlight');
+                        setTimeout(() => {
+                            element.classList.remove('footnote-highlight');
+                        }, 2000);
+                    }
+                }
+            }
+        };
+
+        // Add global click listener
+        document.addEventListener('click', handleFootnoteClick);
+
+        return () => {
+            document.removeEventListener('click', handleFootnoteClick);
+        };
+    }, []);
 
     useEffect(() => {
         const fetchPost = async () => {
@@ -125,7 +167,12 @@ const PostDetail: React.FC = () => {
 
     // Extract post data
     const title = post.title.rendered;
-    const content = post.content.rendered;
+    const rawContent = post.content.rendered;
+    
+    // Process footnotes in the content
+    // This removes WordPress's inline onclick handlers and prepares the HTML
+    // for React-based smooth scrolling. WordPress footnotes come pre-rendered.
+    const { content, hasFootnotes } = processFootnotes(rawContent);
     const date = new Date(post.date).toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'long',
@@ -186,6 +233,11 @@ const PostDetail: React.FC = () => {
 
     return (
         <Box>
+            {/* Add footnote styles */}
+            {hasFootnotes && (
+                <style dangerouslySetInnerHTML={{ __html: footnoteStyles }} />
+            )}
+            
             <Button
                 component={RouterLink}
                 to="/"
@@ -360,7 +412,39 @@ const PostDetail: React.FC = () => {
                     '& li': {
                         mb: 0.5
                     }
-                }}>
+                }}
+                // Backup click handler for footnotes (in case global handler misses)
+                // This ensures footnote navigation works even in complex DOM structures
+                onClick={(e) => {
+                    const target = e.target as HTMLElement;
+                    const link = target.closest('a');
+                    
+                    if (link && link.getAttribute('href')?.startsWith('#')) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        
+                        const href = link.getAttribute('href');
+                        
+                        if (href) {
+                            // Same as global handler - must use getElementById for UUID-based IDs
+                            const id = href.substring(1); // Remove the #
+                            const element = document.getElementById(id);
+                            
+                            if (element) {
+                                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                
+                                // Add highlight effect
+                                element.classList.add('footnote-highlight');
+                                setTimeout(() => {
+                                    element.classList.remove('footnote-highlight');
+                                }, 2000);
+                            } else {
+                                console.error('Could not find element with href:', href);
+                            }
+                        }
+                    }
+                }}
+                >
                     <ShortcodeRenderer content={content} />
                 </Box>
 

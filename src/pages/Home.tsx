@@ -35,6 +35,9 @@ const Home = () => {
       setIsLoading(true);
       setError(null);
 
+      // Small delay to ensure auth state has fully propagated
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       try {
         // Use the API service with authentication and include drafts if authenticated
         const result = await getPosts({

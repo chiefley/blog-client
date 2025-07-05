@@ -57,6 +57,7 @@ export const SimpleAuthProvider: React.FC<AuthProviderProps> = ({ children }) =>
       const token = getSimpleAuthToken();
       if (!token) {
         setIsLoading(false);
+        updateGlobalAuthState(false);
         return;
       }
 
@@ -65,9 +66,11 @@ export const SimpleAuthProvider: React.FC<AuthProviderProps> = ({ children }) =>
       if (verifiedUser) {
         setUser(verifiedUser);
         setIsAuthenticated(true);
+        updateGlobalAuthState(true);
         console.log('✅ Authenticated as:', verifiedUser.display_name);
       } else {
         console.log('❌ Stored token invalid or expired');
+        updateGlobalAuthState(false);
       }
       
       setIsLoading(false);
@@ -89,6 +92,7 @@ export const SimpleAuthProvider: React.FC<AuthProviderProps> = ({ children }) =>
       if (response.success && response.user) {
         setUser(response.user);
         setIsAuthenticated(true);
+        updateGlobalAuthState(true);
         setIsLoading(false);
         console.log('✅ Login successful:', response.user.display_name);
         return true;
@@ -111,15 +115,18 @@ export const SimpleAuthProvider: React.FC<AuthProviderProps> = ({ children }) =>
   const logout = async (): Promise<void> => {
     setIsLoading(true);
     
+    // Clear local state first to prevent race conditions
+    setUser(null);
+    setIsAuthenticated(false);
+    setError(null);
+    updateGlobalAuthState(false);
+    
     try {
       await simpleAuthLogout();
     } catch (error) {
       console.error('Logout error:', error);
     }
     
-    setUser(null);
-    setIsAuthenticated(false);
-    setError(null);
     setIsLoading(false);
     console.log('👋 Logged out');
   };
@@ -186,12 +193,32 @@ export const useAuth = () => {
 // Export for backward compatibility with existing code
 export { AuthContext };
 
+// Store auth state globally for API functions
+let globalAuthState = {
+  isAuthenticated: false,
+  token: null as string | null
+};
+
+// Update global state when context changes
+export const updateGlobalAuthState = (authenticated: boolean) => {
+  globalAuthState.isAuthenticated = authenticated;
+  if (!authenticated) {
+    globalAuthState.token = null;
+  } else {
+    globalAuthState.token = getSimpleAuthToken();
+  }
+};
+
 // Helper function for immediate auth header access (used by API functions)
 export const createAuthHeader = (): { Authorization: string } | {} => {
+  // Check global state first to avoid race conditions
+  if (!globalAuthState.isAuthenticated || !globalAuthState.token) {
+    return {};
+  }
   return createSimpleAuthHeader();
 };
 
 // Helper to check if user is authenticated (for API functions)
 export const isAuthenticated = (): boolean => {
-  return !!getSimpleAuthToken();
+  return globalAuthState.isAuthenticated;
 };

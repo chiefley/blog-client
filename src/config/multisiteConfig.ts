@@ -23,6 +23,9 @@ export interface BlogConfig {
   // Display name of the blog
   name: string;
   
+  // Blog description/tagline
+  description?: string;
+  
   // Primary theme color for the blog (optional)
   themeColor?: string;
 }
@@ -40,6 +43,7 @@ export const blogs: Record<string, BlogConfig> = {
       keywords: ['wa1x', 'hamradio', 'ham-radio', 'radio']
     },
     name: 'WA1X',
+    description: 'Ham Radio Adventures and Technical Articles',
     themeColor: '#1976d2' // Blue theme
   },
   
@@ -52,6 +56,7 @@ export const blogs: Record<string, BlogConfig> = {
       keywords: ['applefinch', 'science', 'evolution']
     },
     name: 'The Apple and the Finch',
+    description: 'Exploring Evolution, Science, and Natural History',
     themeColor: '#43a047' // Green theme
   }
   
