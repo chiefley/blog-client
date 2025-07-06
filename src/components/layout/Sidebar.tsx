@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Paper } from '@mui/material';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/SimpleAuthContext';
 import { getCurrentBlogPath } from '../../config/multisiteConfig';
 
 // Import the componentized sidebar sections

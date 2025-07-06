@@ -1,183 +1,121 @@
-# Simple Auth for WordPress REST API
+# Simple Auth for REST API
 
-A lightweight, reliable authentication plugin for WordPress REST API that replaces complex JWT implementations with a simple token-based system.
+A lightweight token-based authentication plugin for WordPress REST API with full multisite support.
 
 ## Features
 
-- ✅ Simple token-based authentication
-- ✅ No complex JWT configuration required
-- ✅ Database-backed token storage
-- ✅ Automatic expired token cleanup
-- ✅ Multisite compatible
-- ✅ CORS headers support
-- ✅ Draft post preview support for authenticated users
-- ✅ Multiple authentication header formats supported
+- **Simple Token-Based Authentication**: No complex JWT configuration required
+- **Multisite Support**: Automatic table creation for each site in a multisite network
+- **Auto-Table Creation**: Tables are created automatically when needed
+- **Secure Token Storage**: Tokens stored in database with expiration
+- **CORS Support**: Built-in CORS headers for cross-origin requests
+- **Draft Post Access**: Authenticated users can view draft posts via REST API
+- **Token Cleanup**: Automatic cleanup of expired tokens
 
 ## Installation
 
-1. Upload the `wordpress-simple-auth` folder to your `/wp-content/plugins/` directory
-2. Activate the plugin through the 'Plugins' menu in WordPress
-3. For multisite: Network activate for all sites
+1. Upload the plugin folder to `/wp-content/plugins/` or `/wp-content/mu-plugins/` for network-wide activation
+2. Activate the plugin through the WordPress admin panel
+3. For multisite: Network activate to enable on all sites
+
+## Multisite Features
+
+The plugin is fully multisite-aware:
+
+- **Automatic Table Creation**: Each site gets its own `wp_X_simple_auth_tokens` table (where X is the blog ID)
+- **Network Activation**: When network activated, tables are created for all existing sites
+- **New Site Support**: Tables are automatically created when new sites are added to the network
+- **Site Deletion**: Token tables are automatically removed when sites are deleted
+- **Table Prefix Handling**: Correctly handles different table prefixes for each site
 
 ## API Endpoints
 
 ### Login
 ```
 POST /wp-json/simple-auth/v1/login
-Content-Type: application/json
-
-{
-  "username": "your-username",
-  "password": "your-password"
-}
-
-Response:
-{
-  "success": true,
-  "token": "64-character-token",
-  "user": {
-    "id": 1,
-    "username": "user",
-    "email": "user@example.com",
-    "display_name": "User Name",
-    "roles": ["subscriber"],
-    "capabilities": {
-      "read_private_posts": false,
-      "edit_posts": false
-    }
-  },
-  "expires_in": 604800
-}
+Body: { "username": "user", "password": "pass" }
+Response: { "success": true, "token": "...", "user": {...}, "expires_in": 604800 }
 ```
 
 ### Verify Token
 ```
 GET /wp-json/simple-auth/v1/verify
-Authorization: Bearer your-token-here
-
-Response:
-{
-  "success": true,
-  "user": {
-    "id": 1,
-    "username": "user",
-    "email": "user@example.com",
-    "display_name": "User Name",
-    "roles": ["subscriber"]
-  }
-}
+Headers: Authorization: Bearer YOUR_TOKEN
+Response: { "id": 1, "username": "user", ... }
 ```
 
 ### Refresh Token
 ```
 POST /wp-json/simple-auth/v1/refresh
-Authorization: Bearer your-current-token
-
-Response:
-{
-  "success": true,
-  "token": "new-64-character-token",
-  "expires_in": 604800
-}
+Headers: Authorization: Bearer YOUR_TOKEN
+Response: { "success": true, "token": "...", "expires_in": 604800 }
 ```
 
 ### Logout
 ```
 POST /wp-json/simple-auth/v1/logout
-Authorization: Bearer your-token-here
-
-Response:
-{
-  "success": true,
-  "message": "Successfully logged out"
-}
-```
-
-## Using Authentication
-
-Include the token in your API requests using either:
-
-### Authorization Header (Preferred)
-```
-Authorization: Bearer your-token-here
-```
-
-### X-Auth-Token Header (Alternative)
-```
-X-Auth-Token: your-token-here
+Headers: Authorization: Bearer YOUR_TOKEN
+Response: { "success": true, "message": "Logged out successfully" }
 ```
 
 ## Configuration
 
-### CORS Origins
-
-Add custom allowed origins using the filter:
-
-```php
-add_filter('simple_auth_allowed_origins', function($origins) {
-    $origins[] = 'https://your-domain.com';
-    return $origins;
-});
-```
-
 ### Token Expiry
-
-Default expiry is 7 days. To change:
-
+Default: 7 days. Can be modified by defining:
 ```php
 define('SIMPLE_AUTH_TOKEN_EXPIRY', 14 * DAY_IN_SECONDS); // 14 days
 ```
 
-## Features for Developers
+### CORS Origins
+Add allowed origins via filter:
+```php
+add_filter('simple_auth_allowed_origins', function($origins) {
+    $origins[] = 'https://myapp.com';
+    return $origins;
+});
+```
 
-### Draft Post Access
+## Usage in Client Applications
 
-Authenticated users automatically see draft posts in REST API responses:
-- `/wp-json/wp/v2/posts` includes drafts when authenticated
-- `/wp-json/wp/v2/pages` includes drafts when authenticated
+Include the token in the Authorization header:
+```javascript
+fetch('https://yoursite.com/wp-json/wp/v2/posts', {
+    headers: {
+        'Authorization': 'Bearer YOUR_TOKEN_HERE'
+    }
+})
+```
 
-### Multisite Support
+## Database Schema
 
-On multisite installations, login response includes:
-- List of user's blogs
-- Current blog ID
-
-### Token Management
-
-- Tokens are stored in database table `wp_simple_auth_tokens`
-- Automatic daily cleanup of expired tokens
-- Each token tracks creation time and last used time
-
-## Security Notes
-
-- Tokens are cryptographically secure random 64-character strings
-- All tokens have expiry dates
-- Old tokens are revoked when refreshing
-- User capabilities are checked on login
-- Supports standard WordPress user roles and capabilities
+The plugin creates a table for each site with the following structure:
+- `id`: Primary key
+- `user_id`: WordPress user ID
+- `token`: Unique token string
+- `expires_at`: Token expiration timestamp
+- `created_at`: Token creation timestamp
+- `last_used`: Last usage timestamp
 
 ## Troubleshooting
 
-### CORS Issues
-- Ensure your domain is in the allowed origins list
-- Check that the plugin is activated
-- Verify OPTIONS requests return 200 status
+### Table Creation Issues
+The plugin automatically creates tables when needed. If you encounter issues:
+1. Check WordPress debug log for errors
+2. Ensure database user has CREATE TABLE permissions
+3. For multisite, verify the plugin is network activated
 
 ### Token Not Working
-- Check token hasn't expired (7 days by default)
-- Ensure proper header format: `Bearer <token>`
-- Verify user still has required permissions
+1. Check token hasn't expired
+2. Verify Authorization header is being sent
+3. Check CORS settings if making cross-origin requests
 
-### Database Table Not Created
-- Deactivate and reactivate the plugin
-- Check WordPress error logs for database errors
-- Ensure database user has CREATE TABLE permissions
+## Security Notes
 
-## Uninstallation
+- Tokens are generated using cryptographically secure random bytes
+- Expired tokens are automatically cleaned up daily
+- Each token is unique and tied to a specific user
+- Tokens are invalidated on logout
 
-The plugin does not delete its database table on uninstall to preserve tokens. To completely remove:
+## License
 
-1. Deactivate the plugin
-2. Delete the plugin files
-3. Run SQL: `DROP TABLE wp_simple_auth_tokens;`
-4. Clean user meta: `DELETE FROM wp_usermeta WHERE meta_key LIKE '_simple_auth_%';`
+GPL v2 or later

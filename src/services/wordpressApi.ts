@@ -1,7 +1,7 @@
 // src/services/wordpressApi.ts
 import { WordPressPost, Category, Comment, CommentData, SiteInfo } from '../types/interfaces';
 import { getCurrentBlogPath } from '../config/multisiteConfig';
-import { createAuthHeader } from '../contexts/AuthContext';
+import { createAuthHeader } from '../contexts/SimpleAuthContext';
 
 // Base API URL from environment variables
 const API_BASE_URL = import.meta.env.VITE_WP_API_BASE_URL || 'https://wpcms.thechief.com';
@@ -63,12 +63,14 @@ const createRequestOptions = (includeAuth = true): RequestInit => {
   // Add authentication header if available and requested
   if (includeAuth) {
     const authHeader = createAuthHeader();
-    if (authHeader && Object.keys(authHeader).length > 0) {
+    
+    // Double-check that we actually have a valid auth header
+    // createAuthHeader now checks global state first
+    if (authHeader && Object.keys(authHeader).length > 0 && authHeader.Authorization) {
       options.headers = {
         ...options.headers,
         ...authHeader
       };
-      console.log('🔐 Using authentication header for API request');
     }
   }
 
@@ -79,8 +81,9 @@ const createRequestOptions = (includeAuth = true): RequestInit => {
  * Check if user is authenticated (has valid auth header)
  */
 const isAuthenticated = (): boolean => {
+  // Use the function from AuthContext which checks global state
   const authHeader = createAuthHeader();
-  return authHeader && Object.keys(authHeader).length > 0;
+  return authHeader && Object.keys(authHeader).length > 0 && !!authHeader.Authorization;
 };
 
 /**
@@ -482,6 +485,23 @@ export const getPosts = async (options: {
     
     // Check if the request was successful
     if (!response.ok) {
+      // Handle 401 Unauthorized specifically
+      if (response.status === 401 && userIsAuthenticated) {
+        console.log('🔓 Got 401 Unauthorized - retrying without auth header');
+        
+        // Retry without auth header
+        const retryOptions = createRequestOptions(false);
+        const retryResponse = await fetch(requestUrl, retryOptions);
+        
+        if (retryResponse.ok) {
+          const responseData = await retryResponse.json();
+          const totalPages = parseInt(retryResponse.headers.get('X-WP-TotalPages') || '1', 10);
+          
+          console.log(`✅ Retry successful - got ${responseData.length} posts`);
+          return { posts: responseData, totalPages };
+        }
+      }
+      
       // Try to get more information about the error
       let errorDetails = '';
       try {
@@ -566,8 +586,8 @@ export const getPostBySlug = async (slug: string, includeDrafts = false): Promis
   // Check authentication status  
   const userIsAuthenticated = isAuthenticated();
   
-  // Create request options with auth if user is authenticated
-  const requestOptions = createRequestOptions(userIsAuthenticated);
+  // Only include auth header if we're searching for drafts AND user is authenticated
+  const requestOptions = createRequestOptions(includeDrafts && userIsAuthenticated);
   
   // WordPress REST API behavior requires explicit status parameter for drafts
   if (includeDrafts && userIsAuthenticated) {
@@ -643,6 +663,39 @@ export const getPostBySlug = async (slug: string, includeDrafts = false): Promis
     });
     
     if (!response.ok) {
+      // Handle 401 Unauthorized specifically
+      if (response.status === 401) {
+        console.log('🔓 Got 401 Unauthorized - retrying without auth header');
+        
+        // Simple Auth plugin might be expecting auth header even for public posts
+        // Try again with no auth header at all
+        const retryOptions = createRequestOptions(false);
+        const retryResponse = await fetch(requestUrl, retryOptions);
+        
+        if (retryResponse.ok) {
+          const posts = await retryResponse.json();
+          const post = Array.isArray(posts) && posts.length > 0 ? posts[0] : null;
+          
+          if (post) {
+            console.log(`✅ Found post after retry: "${post.title.rendered}" (status: ${post.status})`);
+          }
+          
+          return post;
+        } else if (retryResponse.status === 401) {
+          // Still getting 401 - check the error
+          let retryErrorData = '';
+          try {
+            retryErrorData = await retryResponse.text();
+          } catch (e) {
+            // Ignore
+          }
+          console.error('❌ Still getting 401 after retry:', retryErrorData);
+          
+          // Return null instead of throwing to handle gracefully
+          return null;
+        }
+      }
+      
       let errorDetails = '';
       try {
         const errorData = await response.text();
@@ -736,8 +789,8 @@ export const getCategories = async (): Promise<Category[]> => {
   const requestUrl = `${apiUrl}/categories?per_page=100`;
 
   try {
-    // Create request options - categories don't typically need auth but include it anyway
-    const requestOptions = createRequestOptions(true);
+    // Categories are public - don't include auth headers
+    const requestOptions = createRequestOptions(false);
 
     console.log('Fetching categories');
     console.log('Categories request URL:', requestUrl);
@@ -780,8 +833,8 @@ export const getCategoryBySlug = async (slug: string): Promise<Category | null> 
   const requestUrl = `${apiUrl}/categories?slug=${slug}`;
 
   try {
-    // Create request options
-    const requestOptions = createRequestOptions(true);
+    // Categories are public - don't include auth headers
+    const requestOptions = createRequestOptions(false);
 
     console.log('Fetching category by slug:', slug);
     console.log('Request URL:', requestUrl);
@@ -826,8 +879,8 @@ export const getTags = async (): Promise<any[]> => {
   const requestUrl = `${apiUrl}/tags?per_page=100`;
 
   try {
-    // Create request options
-    const requestOptions = createRequestOptions(true);
+    // Tags are public - don't include auth headers
+    const requestOptions = createRequestOptions(false);
 
     console.log('Fetching tags');
     console.log('Tags request URL:', requestUrl);
@@ -870,8 +923,8 @@ export const getComments = async (postId: number): Promise<Comment[]> => {
   const requestUrl = `${apiUrl}/comments?post=${postId}&orderby=date&order=asc&per_page=100`;
   
   try {
-    // Create request options
-    const requestOptions = createRequestOptions(true);
+    // Comments are public - use the standard request options without auth
+    const requestOptions = createRequestOptions(false);
 
     console.log('Fetching comments for post:', postId);
     console.log('Request URL:', requestUrl);
@@ -885,6 +938,32 @@ export const getComments = async (postId: number): Promise<Comment[]> => {
     });
     
     if (!response.ok) {
+      // Handle 401 Unauthorized specifically for comments
+      if (response.status === 401) {
+        console.log('🔓 Got 401 for comments - checking error details');
+        
+        let errorText = '';
+        let errorJson: any = null;
+        try {
+          errorText = await response.text();
+          console.log('401 Error text:', errorText);
+          
+          // Try to parse as JSON
+          try {
+            errorJson = JSON.parse(errorText);
+            console.log('401 Error JSON:', errorJson);
+          } catch (e) {
+            // Not JSON
+          }
+        } catch (e) {
+          console.log('Could not read error text');
+        }
+        
+        // Comments should always be public, so just return empty array
+        console.log('🔓 Returning empty array for comments due to 401');
+        return [];
+      }
+      
       // Try to get more information about the error
       let errorDetails = '';
       try {

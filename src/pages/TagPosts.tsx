@@ -10,7 +10,7 @@ import {
 import PostList from '../components/posts/PostList';
 import { WordPressPost } from '../types/interfaces';
 import { getApiUrl } from '../services/wordpressApi';
-import { useAuth, createAuthHeader } from '../contexts/AuthContext';
+import { useAuth, createAuthHeader } from '../contexts/SimpleAuthContext';
 
 const TagPosts = () => {
   const { slug } = useParams<{ slug: string }>();

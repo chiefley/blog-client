@@ -4,7 +4,7 @@ import PostList from '../components/posts/PostList';
 import FeaturedArticle from '../components/posts/FeaturedArticle';
 import { WordPressPost } from '../types/interfaces';
 import { getPosts } from '../services/wordpressApi';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/SimpleAuthContext';
 
 const Home = () => {
   const [posts, setPosts] = useState<WordPressPost[]>([]);

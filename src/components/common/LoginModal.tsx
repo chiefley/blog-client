@@ -13,7 +13,7 @@ import {
   IconButton
 } from '@mui/material';
 import { Close as CloseIcon, Login as LoginIcon } from '@mui/icons-material';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/SimpleAuthContext';
 
 interface LoginModalProps {
   open: boolean;

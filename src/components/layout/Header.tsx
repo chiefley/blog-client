@@ -22,7 +22,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 import { useSiteInfo } from '../../contexts/SiteInfoContext';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/SimpleAuthContext';
 import { useAppTheme } from '../../contexts/ThemeContext';
 import LoginModal from '../common/LoginModal';
 

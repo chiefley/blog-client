@@ -92,6 +92,12 @@ export const simpleAuthLogin = async (
 export const simpleAuthLogout = async (): Promise<void> => {
   const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
   
+  // Clear local storage immediately to prevent race conditions
+  localStorage.removeItem(STORAGE_KEYS.TOKEN);
+  localStorage.removeItem(STORAGE_KEYS.USER);
+  localStorage.removeItem(STORAGE_KEYS.EXPIRES);
+  
+  // Then try to notify the server
   if (token) {
     const apiUrl = getRootApiUrl();
     
@@ -104,14 +110,9 @@ export const simpleAuthLogout = async (): Promise<void> => {
       });
     } catch (error) {
       console.error('Logout request failed:', error);
-      // Continue with local cleanup even if server request fails
+      // Already cleared local storage, so we're good
     }
   }
-  
-  // Clear local storage
-  localStorage.removeItem(STORAGE_KEYS.TOKEN);
-  localStorage.removeItem(STORAGE_KEYS.USER);
-  localStorage.removeItem(STORAGE_KEYS.EXPIRES);
 };
 
 /**
@@ -200,7 +201,9 @@ export const simpleAuthRefresh = async (): Promise<string | null> => {
  * Get current auth token
  */
 export const getSimpleAuthToken = (): string | null => {
-  return localStorage.getItem(STORAGE_KEYS.TOKEN);
+  const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
+  console.log('🗝️ getSimpleAuthToken:', token ? 'Token found in localStorage' : 'No token in localStorage');
+  return token;
 };
 
 /**

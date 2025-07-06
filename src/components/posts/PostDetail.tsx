@@ -23,6 +23,7 @@ import { getResponsiveImageUrl } from '../../utils/imageUtils';
 import { Comments } from '../comments';
 import { ShortcodeRenderer } from '../shortcodes/ShortcodeRenderer';
 import { processFootnotes, footnoteStyles } from '../../utils/footnoteProcessor';
+import { useAuth } from '../../contexts/SimpleAuthContext';
 
 const PostDetail: React.FC = () => {
     const { slug, id } = useParams<{ slug?: string; id?: string }>();
@@ -30,6 +31,7 @@ const PostDetail: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [refreshing, setRefreshing] = useState(false);
+    const { isAuthenticated } = useAuth();
 
     // Global footnote click handler
     // IMPORTANT: This handles WordPress native footnote navigation
@@ -92,8 +94,8 @@ const PostDetail: React.FC = () => {
                         return;
                     }
                 } else if (slug) {
-                    // Fetch by slug (for published posts)
-                    postData = await getPostBySlug(slug);
+                    // Fetch by slug - include drafts only if authenticated
+                    postData = await getPostBySlug(slug, isAuthenticated);
                 }
                 
                 if (postData) {

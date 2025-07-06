@@ -169,27 +169,13 @@ class Simple_Auth {
      * Plugin activation
      */
     public static function activate() {
-        // Create tokens table
-        global $wpdb;
-        $table_name = $wpdb->prefix . 'simple_auth_tokens';
+        // Create tokens table for all sites in network or single site
+        Token_Manager::create_tables_for_network();
         
-        $charset_collate = $wpdb->get_charset_collate();
-        
-        $sql = "CREATE TABLE IF NOT EXISTS $table_name (
-            id bigint(20) NOT NULL AUTO_INCREMENT,
-            user_id bigint(20) NOT NULL,
-            token varchar(64) NOT NULL,
-            expires_at datetime NOT NULL,
-            created_at datetime DEFAULT CURRENT_TIMESTAMP,
-            last_used datetime DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (id),
-            KEY user_id (user_id),
-            KEY token (token),
-            KEY expires_at (expires_at)
-        ) $charset_collate;";
-        
-        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-        dbDelta($sql);
+        // Schedule cleanup cron job
+        if (!wp_next_scheduled('simple_auth_cleanup')) {
+            wp_schedule_event(time(), 'daily', 'simple_auth_cleanup');
+        }
     }
     
     /**

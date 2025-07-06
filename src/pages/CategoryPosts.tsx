@@ -10,7 +10,7 @@ import {
 import PostList from '../components/posts/PostList';
 import { WordPressPost } from '../types/interfaces';
 import { getPosts, getCategoryBySlug } from '../services/wordpressApi';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/SimpleAuthContext';
 
 const CategoryPosts = () => {
   const { slug } = useParams<{ slug: string }>();

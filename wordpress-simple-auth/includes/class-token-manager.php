@@ -1,10 +1,11 @@
 <?php
 /**
- * Token management class
+ * Token management class with multisite support
  */
 class Token_Manager {
     
     private $table_name;
+    private $table_checked = false;
     
     public function __construct() {
         global $wpdb;
@@ -12,10 +13,64 @@ class Token_Manager {
     }
     
     /**
+     * Ensure the tokens table exists for the current site
+     */
+    private function ensure_table_exists() {
+        // Only check once per request to avoid multiple checks
+        if ($this->table_checked) {
+            return true;
+        }
+        
+        global $wpdb;
+        
+        // Check if table exists
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$this->table_name}'") === $this->table_name;
+        
+        if (!$table_exists) {
+            // Create the table
+            $this->create_tokens_table();
+        }
+        
+        $this->table_checked = true;
+        return true;
+    }
+    
+    /**
+     * Create the tokens table for the current site
+     */
+    private function create_tokens_table() {
+        global $wpdb;
+        
+        $charset_collate = $wpdb->get_charset_collate();
+        
+        $sql = "CREATE TABLE IF NOT EXISTS {$this->table_name} (
+            id bigint(20) NOT NULL AUTO_INCREMENT,
+            user_id bigint(20) NOT NULL,
+            token varchar(64) NOT NULL,
+            expires_at datetime NOT NULL,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            last_used datetime DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY user_id (user_id),
+            KEY token (token),
+            KEY expires_at (expires_at)
+        ) $charset_collate;";
+        
+        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+        dbDelta($sql);
+        
+        // Update database version for this site
+        update_option('simple_auth_db_version', SIMPLE_AUTH_VERSION);
+    }
+    
+    /**
      * Generate a new token for a user
      */
     public function generate_token($user_id) {
         global $wpdb;
+        
+        // Ensure table exists
+        $this->ensure_table_exists();
         
         // Generate a secure random token
         $token = bin2hex(random_bytes(32));
@@ -52,6 +107,9 @@ class Token_Manager {
      */
     public function validate_token($token) {
         global $wpdb;
+        
+        // Ensure table exists
+        $this->ensure_table_exists();
         
         // Sanitize token
         $token = sanitize_text_field($token);
@@ -90,6 +148,9 @@ class Token_Manager {
     public function revoke_token($token) {
         global $wpdb;
         
+        // Ensure table exists
+        $this->ensure_table_exists();
+        
         // Get user ID before deleting
         $user_id = $this->validate_token($token);
         
@@ -118,6 +179,9 @@ class Token_Manager {
     public function revoke_all_user_tokens($user_id) {
         global $wpdb;
         
+        // Ensure table exists
+        $this->ensure_table_exists();
+        
         // Delete all tokens for this user
         $wpdb->delete(
             $this->table_name,
@@ -137,6 +201,9 @@ class Token_Manager {
      */
     public function cleanup_expired_tokens() {
         global $wpdb;
+        
+        // Ensure table exists
+        $this->ensure_table_exists();
         
         // Delete expired tokens from database
         $deleted = $wpdb->query($wpdb->prepare(
@@ -163,6 +230,9 @@ class Token_Manager {
     public function get_user_tokens($user_id) {
         global $wpdb;
         
+        // Ensure table exists
+        $this->ensure_table_exists();
+        
         return $wpdb->get_results($wpdb->prepare(
             "SELECT token, created_at, last_used, expires_at 
              FROM {$this->table_name} 
@@ -171,5 +241,54 @@ class Token_Manager {
             $user_id,
             current_time('mysql')
         ));
+    }
+    
+    /**
+     * Static method to handle activation for multisite
+     */
+    public static function create_tables_for_network() {
+        global $wpdb;
+        
+        if (is_multisite()) {
+            // Get all sites in the network
+            $sites = get_sites();
+            
+            foreach ($sites as $site) {
+                switch_to_blog($site->blog_id);
+                
+                // Create token manager instance for this site
+                $token_manager = new self();
+                $token_manager->create_tokens_table();
+                
+                restore_current_blog();
+            }
+        } else {
+            // Single site installation
+            $token_manager = new self();
+            $token_manager->create_tokens_table();
+        }
+    }
+    
+    /**
+     * Handle new site creation in multisite
+     */
+    public static function on_create_blog($blog_id, $user_id, $domain, $path, $site_id, $meta) {
+        if (is_plugin_active_for_network('simple-auth/simple-auth.php')) {
+            switch_to_blog($blog_id);
+            
+            $token_manager = new self();
+            $token_manager->create_tokens_table();
+            
+            restore_current_blog();
+        }
+    }
+    
+    /**
+     * Handle site deletion in multisite
+     */
+    public static function on_delete_blog($tables) {
+        global $wpdb;
+        $tables[] = $wpdb->prefix . 'simple_auth_tokens';
+        return $tables;
     }
 }

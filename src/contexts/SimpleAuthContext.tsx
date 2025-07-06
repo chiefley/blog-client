@@ -211,11 +211,18 @@ export const updateGlobalAuthState = (authenticated: boolean) => {
 
 // Helper function for immediate auth header access (used by API functions)
 export const createAuthHeader = (): { Authorization: string } | {} => {
+  console.log('🔑 createAuthHeader called:', {
+    isAuthenticated: globalAuthState.isAuthenticated,
+    hasToken: !!globalAuthState.token,
+    tokenPreview: globalAuthState.token ? globalAuthState.token.substring(0, 10) + '...' : 'null'
+  });
+  
   // Check global state first to avoid race conditions
   if (!globalAuthState.isAuthenticated || !globalAuthState.token) {
     return {};
   }
-  return createSimpleAuthHeader();
+  // Only return auth header if we're truly authenticated
+  return { Authorization: `Bearer ${globalAuthState.token}` };
 };
 
 // Helper to check if user is authenticated (for API functions)

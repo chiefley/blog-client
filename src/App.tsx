@@ -6,7 +6,7 @@ import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
 import { Header, Sidebar } from './components/layout';
 import Footer from './components/layout/Footer';
 import { SiteInfoProvider } from './contexts/SiteInfoContext';
-import { AuthProvider } from './contexts/AuthContext';
+import { SimpleAuthProvider as AuthProvider } from './contexts/SimpleAuthContext';
 import { ThemeProvider, useAppTheme } from './contexts/ThemeContext';
 
 // Lazy load pages instead of importing them directly
