@@ -21,14 +21,6 @@ export const getApiUrl = (): string => {
   // Add the REST API endpoint
   apiUrl += '/wp-json/wp/v2';
   
-  // Debug logging
-  console.log('🌐 API URL Construction:');
-  console.log('  - Hostname:', window.location.hostname);
-  console.log('  - Path:', window.location.pathname);
-  console.log('  - Detected blog path:', blogPath ? `"${blogPath}"` : '(main blog)');
-  console.log('  - Base API URL:', API_BASE_URL);
-  console.log('  - Final API URL:', apiUrl);
-  
   return apiUrl;
 };
 
@@ -66,7 +58,7 @@ const createRequestOptions = (includeAuth = true): RequestInit => {
     
     // Double-check that we actually have a valid auth header
     // createAuthHeader now checks global state first
-    if (authHeader && Object.keys(authHeader).length > 0 && authHeader.Authorization) {
+    if (authHeader && Object.keys(authHeader).length > 0 && 'Authorization' in authHeader) {
       options.headers = {
         ...options.headers,
         ...authHeader
@@ -83,7 +75,7 @@ const createRequestOptions = (includeAuth = true): RequestInit => {
 const isAuthenticated = (): boolean => {
   // Use the function from AuthContext which checks global state
   const authHeader = createAuthHeader();
-  return authHeader && Object.keys(authHeader).length > 0 && !!authHeader.Authorization;
+  return authHeader && Object.keys(authHeader).length > 0 && 'Authorization' in authHeader;
 };
 
 /**
@@ -99,7 +91,6 @@ export const getSiteInfo = async (): Promise<SiteInfo> => {
     baseApiUrl += `/${blogPath}`;
   }
   
-  console.log('Fetching site info for:', baseApiUrl);
   
   // Create an array of endpoints to try in order
   const endpointsToTry = [
@@ -126,7 +117,6 @@ export const getSiteInfo = async (): Promise<SiteInfo> => {
   // Try each endpoint in order
   for (const endpoint of endpointsToTry) {
     try {
-      console.log(`Attempting to fetch site info from ${endpoint.description}:`, endpoint.url);
       
       // Set up request options
       const requestOptions: RequestInit = {
@@ -146,19 +136,13 @@ export const getSiteInfo = async (): Promise<SiteInfo> => {
         const response = await fetch(endpoint.url, requestOptions);
         clearTimeout(timeoutId);
         
-        console.log(`Response from ${endpoint.description}:`, response.status, response.statusText);
         
         if (!response.ok) {
-          // Log detailed error for debugging
-          console.warn(`${endpoint.description} returned ${response.status} ${response.statusText}`);
-          
           // Try to get more error details if possible
           try {
-            const errorText = await response.text();
-            console.warn('Error details:', errorText.substring(0, 200)); // First 200 chars
+            await response.text();
           } catch (e) {
-            // Just log and continue if we can't get the error text
-            console.warn('Could not read error details');
+            // Just continue if we can't get the error text
           }
           
           continue; // Try next endpoint
@@ -169,11 +153,9 @@ export const getSiteInfo = async (): Promise<SiteInfo> => {
         // Process response based on which endpoint succeeded
         if (endpoint.type === 'custom') {
           // This is our custom endpoint, return data directly
-          console.log('Site info fetched successfully from custom endpoint');
           return data as SiteInfo;
         } else if (endpoint.type === 'settings') {
           // This is the WordPress settings endpoint
-          console.log('Extracting site info from WordPress settings endpoint');
           return {
             name: data.title || 'XBlog',
             description: data.description || 'A WordPress Blog',  // This is the tagline!
@@ -185,7 +167,6 @@ export const getSiteInfo = async (): Promise<SiteInfo> => {
           };
         } else if (endpoint.type === 'root' || endpoint.type === 'v2root') {
           // This is the WordPress root endpoint, extract what we can
-          console.log('Extracting site info from WordPress root endpoint');
           return {
             name: data.name || 'XBlog',
             description: data.description || 'A WordPress Blog',
@@ -208,7 +189,6 @@ export const getSiteInfo = async (): Promise<SiteInfo> => {
   }
   
   // If we reach here, all endpoints failed - use local environment detection
-  console.warn('All site info endpoints failed. Using local fallback detection...');
   
   try {
     // Extract site URL from window location (this is safe)
@@ -230,7 +210,6 @@ export const getSiteInfo = async (): Promise<SiteInfo> => {
         if (blogConfig) {
           blogName = blogConfig.name;
           blogDescription = blogConfig.description || blogDescription;
-          console.log(`Using multisite config for blog: ${blogName}`);
         }
       } catch (e) {
         console.error('Could not import multisite config:', e);
@@ -321,7 +300,6 @@ export const getPosts = async (options: {
   let totalPagesCount = 1;
   
   if (includeDrafts && userIsAuthenticated) {
-    console.log('🔍 Making authenticated requests for published and draft posts separately');
     
     // First, get published posts
     params.append('status', 'publish');
@@ -333,7 +311,6 @@ export const getPosts = async (options: {
         const publishedPosts = await publishedResponse.json();
         allPosts = [...publishedPosts];
         totalPagesCount = parseInt(publishedResponse.headers.get('X-WP-TotalPages') || '1', 10);
-        console.log(`📖 Fetched ${publishedPosts.length} published posts`);
       }
     } catch (error) {
       console.error('Error fetching published posts:', error);
@@ -349,15 +326,12 @@ export const getPosts = async (options: {
         const userData = await userResponse.json();
         userId = userData.id;
         isSuperAdmin = userData.is_super_admin === true;
-        console.log(`👤 Current user: ${userData.name} (ID: ${userId})${isSuperAdmin ? ' [SUPER ADMIN]' : ''}`);
         
         // Log roles for debugging
         if (userData.roles && userData.roles.length > 0) {
-          console.log(`👤 User roles: ${userData.roles.join(', ')}`);
         }
       }
     } catch (e) {
-      console.log('Could not get user ID for draft filtering');
     }
     
     // Try different approaches to get draft posts
@@ -392,25 +366,20 @@ export const getPosts = async (options: {
         // Ensure draftPosts is an array before spreading
         if (Array.isArray(draftPosts)) {
           allPosts = [...allPosts, ...draftPosts];
-          console.log(`📝 Fetched ${draftPosts.length} draft posts${userId ? ' (filtered by author)' : ''}`);
           
           // Update total pages if draft response has more
           const draftTotalPages = parseInt(draftResponse.headers.get('X-WP-TotalPages') || '1', 10);
           totalPagesCount = Math.max(totalPagesCount, draftTotalPages);
         } else {
-          console.log('📝 Draft posts response was not an array:', draftPosts);
         }
       } else {
-        console.log(`📝 Could not fetch draft posts (status: ${draftResponse.status})${userId ? ' even with author filter' : ''}`);
         
         // Try to get error details for debugging
         try {
-          const errorData = await draftResponse.json();
-          console.log('Draft posts error:', errorData.message || errorData.code || 'Unknown error');
+          await draftResponse.json();
           
           // If author-filtered request failed, try without author filter
           if (userId && (draftResponse.status === 403 || draftResponse.status === 401)) {
-            console.log('🔄 Retrying draft fetch without author filter...');
             draftParams.delete('author');
             const retryUrl = `${apiUrl}/posts?${draftParams}`;
             const retryResponse = await fetch(retryUrl, requestOptions);
@@ -419,20 +388,11 @@ export const getPosts = async (options: {
               const retryPosts = await retryResponse.json();
               if (Array.isArray(retryPosts)) {
                 allPosts = [...allPosts, ...retryPosts];
-                console.log(`📝 Fetched ${retryPosts.length} draft posts (without author filter)`);
               }
             } else {
-              console.log(`📝 Retry also failed (status: ${retryResponse.status})`);
               
               // For superadmins, log more debugging info
               if (isSuperAdmin) {
-                console.warn('⚠️ Super Admin cannot access drafts - this may be a WordPress REST API limitation');
-                console.log('Debug info:', {
-                  apiUrl,
-                  draftUrl: retryUrl,
-                  blogPath: getCurrentBlogPath(),
-                  status: retryResponse.status
-                });
               }
             }
           }
@@ -457,37 +417,19 @@ export const getPosts = async (options: {
   
   // Standard request for published posts only
   params.append('status', 'publish');
-  console.log('📖 Requesting only published posts');
 
   const requestUrl = `${apiUrl}/posts?${params}`;
   
   try {
 
-    // For debugging - log the request details
-    console.log('Request URL:', requestUrl);
-    console.log('Request includes auth:', userIsAuthenticated);
-    console.log('Include drafts:', includeDrafts);
 
     const response = await fetch(requestUrl, requestOptions);
     
-    // Log response details for debugging
-    console.log(`Posts API Response [${response.status}]:`, {
-      url: requestUrl,
-      status: response.status,
-      authenticated: userIsAuthenticated,
-      includeDrafts: includeDrafts,
-      contentType: response.headers.get('Content-Type'),
-      headers: {
-        'X-WP-Total': response.headers.get('X-WP-Total'),
-        'X-WP-TotalPages': response.headers.get('X-WP-TotalPages')
-      }
-    });
     
     // Check if the request was successful
     if (!response.ok) {
       // Handle 401 Unauthorized specifically
       if (response.status === 401 && userIsAuthenticated) {
-        console.log('🔓 Got 401 Unauthorized - retrying without auth header');
         
         // Retry without auth header
         const retryOptions = createRequestOptions(false);
@@ -497,7 +439,6 @@ export const getPosts = async (options: {
           const responseData = await retryResponse.json();
           const totalPages = parseInt(retryResponse.headers.get('X-WP-TotalPages') || '1', 10);
           
-          console.log(`✅ Retry successful - got ${responseData.length} posts`);
           return { posts: responseData, totalPages };
         }
       }
@@ -548,19 +489,14 @@ export const getPosts = async (options: {
     if (posts.length > 0) {
       const firstPost = posts[0];
       if (!firstPost.id || !firstPost.title) {
-        console.warn('Posts array contains invalid post objects:', firstPost);
       }
     }
     
     // Log what types of posts we received
     const draftPosts = posts.filter((post: WordPressPost) => post.status === 'draft');
-    const publishedPosts = posts.filter((post: WordPressPost) => post.status === 'publish');
-    const otherPosts = posts.filter((post: WordPressPost) => post.status !== 'draft' && post.status !== 'publish');
     
-    console.log(`📊 Posts received: ${posts.length} total (${publishedPosts.length} published, ${draftPosts.length} drafts, ${otherPosts.length} other)`);
     
     if (draftPosts.length > 0) {
-      console.log('📝 Draft posts found:', draftPosts.map(p => p.title.rendered));
     }
     
     return { posts, totalPages };
@@ -591,7 +527,6 @@ export const getPostBySlug = async (slug: string, includeDrafts = false): Promis
   
   // WordPress REST API behavior requires explicit status parameter for drafts
   if (includeDrafts && userIsAuthenticated) {
-    console.log('🔍 Searching for post in both published and draft posts');
     
     // First try to find in published posts
     params.append('status', 'publish');
@@ -602,7 +537,6 @@ export const getPostBySlug = async (slug: string, includeDrafts = false): Promis
       if (publishedResponse.ok) {
         const publishedPosts = await publishedResponse.json();
         if (publishedPosts.length > 0) {
-          console.log(`✅ Found published post: "${publishedPosts[0].title.rendered}"`);
           return publishedPosts[0];
         }
       }
@@ -622,16 +556,13 @@ export const getPostBySlug = async (slug: string, includeDrafts = false): Promis
         
         // Ensure draftPosts is an array
         if (Array.isArray(draftPosts) && draftPosts.length > 0) {
-          console.log(`📝 Found draft post: "${draftPosts[0].title.rendered}"`);
           return draftPosts[0];
         }
       } else {
-        console.log(`📝 Could not fetch draft posts (status: ${draftResponse.status})`);
         
         // Try to get error details for debugging
         try {
-          const errorData = await draftResponse.json();
-          console.log('Draft posts error response:', errorData);
+          await draftResponse.json();
         } catch (e) {
           // Ignore if we can't parse error response
         }
@@ -640,32 +571,22 @@ export const getPostBySlug = async (slug: string, includeDrafts = false): Promis
       console.error('Error fetching draft post:', error);
     }
     
-    console.log(`❌ Post with slug "${slug}" not found in published or drafts`);
     return null;
   }
   
   // Only search published posts (non-authenticated case)
   params.append('status', 'publish');
-  console.log('📖 Searching only published posts');
 
   const requestUrl = `${apiUrl}/posts?${params}`;
 
   try {
-    console.log('Fetching post by slug:', slug);
-    console.log('Request URL:', requestUrl);
 
     const response = await fetch(requestUrl, requestOptions);
     
-    console.log(`Post by Slug API Response [${response.status}]:`, {
-      slug,
-      url: requestUrl,
-      status: response.status
-    });
     
     if (!response.ok) {
       // Handle 401 Unauthorized specifically
       if (response.status === 401) {
-        console.log('🔓 Got 401 Unauthorized - retrying without auth header');
         
         // Simple Auth plugin might be expecting auth header even for public posts
         // Try again with no auth header at all
@@ -677,7 +598,6 @@ export const getPostBySlug = async (slug: string, includeDrafts = false): Promis
           const post = Array.isArray(posts) && posts.length > 0 ? posts[0] : null;
           
           if (post) {
-            console.log(`✅ Found post after retry: "${post.title.rendered}" (status: ${post.status})`);
           }
           
           return post;
@@ -712,9 +632,7 @@ export const getPostBySlug = async (slug: string, includeDrafts = false): Promis
     const post = Array.isArray(posts) && posts.length > 0 ? posts[0] : null;
     
     if (post) {
-      console.log(`✅ Found post: "${post.title.rendered}" (status: ${post.status})`);
     } else {
-      console.log(`❌ Post with slug "${slug}" not found`);
     }
     
     return post;
@@ -737,24 +655,16 @@ export const getPostById = async (id: number, includeDrafts = false): Promise<Wo
   const requestOptions = createRequestOptions(userIsAuthenticated);
   
   try {
-    console.log(`Fetching post by ID: ${id}`);
     
     // WordPress REST API allows fetching by ID directly
     const requestUrl = `${apiUrl}/posts/${id}?_embed=author,wp:featuredmedia,wp:term`;
     
     const response = await fetch(requestUrl, requestOptions);
     
-    console.log(`Post by ID API Response [${response.status}]:`, {
-      id,
-      url: requestUrl,
-      status: response.status,
-      authenticated: userIsAuthenticated
-    });
     
     if (!response.ok) {
       // If we get a 401/403 and we're trying to get a draft, it's likely a permissions issue
       if ((response.status === 401 || response.status === 403) && includeDrafts) {
-        console.log('📝 Access denied to draft post - user may not have permission');
       }
       
       let errorDetails = '';
@@ -771,7 +681,6 @@ export const getPostById = async (id: number, includeDrafts = false): Promise<Wo
     const post = await response.json();
     
     if (post) {
-      console.log(`✅ Found post by ID: "${post.title.rendered}" (status: ${post.status})`);
     }
     
     return post;
@@ -792,16 +701,9 @@ export const getCategories = async (): Promise<Category[]> => {
     // Categories are public - don't include auth headers
     const requestOptions = createRequestOptions(false);
 
-    console.log('Fetching categories');
-    console.log('Categories request URL:', requestUrl);
 
     const response = await fetch(requestUrl, requestOptions);
     
-    // Log response details for debugging
-    console.log(`Categories API Response [${response.status}]:`, {
-      url: requestUrl,
-      status: response.status
-    });
     
     if (!response.ok) {
       // Try to get more information about the error
@@ -817,7 +719,6 @@ export const getCategories = async (): Promise<Category[]> => {
     }
     
     const categories = await response.json();
-    console.log(`Successfully fetched ${categories.length} categories`);
     return categories;
   } catch (error) {
     console.error('Error fetching categories:', error);
@@ -836,17 +737,9 @@ export const getCategoryBySlug = async (slug: string): Promise<Category | null> 
     // Categories are public - don't include auth headers
     const requestOptions = createRequestOptions(false);
 
-    console.log('Fetching category by slug:', slug);
-    console.log('Request URL:', requestUrl);
 
     const response = await fetch(requestUrl, requestOptions);
     
-    // Log response details for debugging
-    console.log(`Category by Slug API Response [${response.status}]:`, {
-      slug,
-      url: requestUrl,
-      status: response.status
-    });
     
     if (!response.ok) {
       // Try to get more information about the error
@@ -882,16 +775,9 @@ export const getTags = async (): Promise<any[]> => {
     // Tags are public - don't include auth headers
     const requestOptions = createRequestOptions(false);
 
-    console.log('Fetching tags');
-    console.log('Tags request URL:', requestUrl);
 
     const response = await fetch(requestUrl, requestOptions);
     
-    // Log response details for debugging
-    console.log(`Tags API Response [${response.status}]:`, {
-      url: requestUrl,
-      status: response.status
-    });
     
     if (!response.ok) {
       // Try to get more information about the error
@@ -907,7 +793,6 @@ export const getTags = async (): Promise<any[]> => {
     }
     
     const tags = await response.json();
-    console.log(`Successfully fetched ${tags.length} tags`);
     return tags;
   } catch (error) {
     console.error('Error fetching tags:', error);
@@ -926,41 +811,27 @@ export const getComments = async (postId: number): Promise<Comment[]> => {
     // Comments are public - use the standard request options without auth
     const requestOptions = createRequestOptions(false);
 
-    console.log('Fetching comments for post:', postId);
-    console.log('Request URL:', requestUrl);
 
     const response = await fetch(requestUrl, requestOptions);
     
-    console.log(`Comments API Response [${response.status}]:`, {
-      postId,
-      url: requestUrl,
-      status: response.status
-    });
     
     if (!response.ok) {
       // Handle 401 Unauthorized specifically for comments
       if (response.status === 401) {
-        console.log('🔓 Got 401 for comments - checking error details');
         
-        let errorText = '';
-        let errorJson: any = null;
         try {
-          errorText = await response.text();
-          console.log('401 Error text:', errorText);
+          const errorText = await response.text();
           
           // Try to parse as JSON
           try {
-            errorJson = JSON.parse(errorText);
-            console.log('401 Error JSON:', errorJson);
+            JSON.parse(errorText);
           } catch (e) {
             // Not JSON
           }
         } catch (e) {
-          console.log('Could not read error text');
         }
         
         // Comments should always be public, so just return empty array
-        console.log('🔓 Returning empty array for comments due to 401');
         return [];
       }
       
@@ -977,7 +848,6 @@ export const getComments = async (postId: number): Promise<Comment[]> => {
     }
     
     const comments = await response.json();
-    console.log(`Successfully fetched ${comments.length} comments for post ${postId}`);
     return comments;
   } catch (error) {
     console.error('Error fetching comments:', error);
@@ -1003,16 +873,9 @@ export const postComment = async (commentData: CommentData): Promise<Comment | n
       body: JSON.stringify(commentData)
     };
 
-    console.log('Posting comment for post:', commentData.post);
-    console.log('Request URL:', requestUrl);
 
     const response = await fetch(requestUrl, requestOptions);
     
-    console.log(`Post Comment API Response [${response.status}]:`, {
-      postId: commentData.post,
-      url: requestUrl,
-      status: response.status
-    });
     
     if (!response.ok) {
       // Try to get more information about the error
@@ -1034,7 +897,6 @@ export const postComment = async (commentData: CommentData): Promise<Comment | n
     } 
     
     const newComment = await response.json();
-    console.log('Successfully posted comment');
     return newComment;
   } catch (error) {
     console.error('Error posting comment:', error);

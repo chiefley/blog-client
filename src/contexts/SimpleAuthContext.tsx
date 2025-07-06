@@ -67,9 +67,9 @@ export const SimpleAuthProvider: React.FC<AuthProviderProps> = ({ children }) =>
         setUser(verifiedUser);
         setIsAuthenticated(true);
         updateGlobalAuthState(true);
-        console.log('✅ Authenticated as:', verifiedUser.display_name);
+        // Successfully authenticated
       } else {
-        console.log('❌ Stored token invalid or expired');
+        // Token invalid or expired
         updateGlobalAuthState(false);
       }
       
@@ -94,7 +94,7 @@ export const SimpleAuthProvider: React.FC<AuthProviderProps> = ({ children }) =>
         setIsAuthenticated(true);
         updateGlobalAuthState(true);
         setIsLoading(false);
-        console.log('✅ Login successful:', response.user.display_name);
+        // Login successful
         return true;
       }
       
@@ -128,7 +128,7 @@ export const SimpleAuthProvider: React.FC<AuthProviderProps> = ({ children }) =>
     }
     
     setIsLoading(false);
-    console.log('👋 Logged out');
+    // Logged out successfully
   };
 
   /**
@@ -156,7 +156,7 @@ export const SimpleAuthProvider: React.FC<AuthProviderProps> = ({ children }) =>
     if (!isAuthenticated) return;
 
     const refreshInterval = setInterval(async () => {
-      console.log('🔄 Attempting token refresh...');
+      // Attempting token refresh
       const success = await refreshToken();
       if (!success) {
         console.error('Token refresh failed, logging out');
@@ -211,12 +211,6 @@ export const updateGlobalAuthState = (authenticated: boolean) => {
 
 // Helper function for immediate auth header access (used by API functions)
 export const createAuthHeader = (): { Authorization: string } | {} => {
-  console.log('🔑 createAuthHeader called:', {
-    isAuthenticated: globalAuthState.isAuthenticated,
-    hasToken: !!globalAuthState.token,
-    tokenPreview: globalAuthState.token ? globalAuthState.token.substring(0, 10) + '...' : 'null'
-  });
-  
   // Check global state first to avoid race conditions
   if (!globalAuthState.isAuthenticated || !globalAuthState.token) {
     return {};

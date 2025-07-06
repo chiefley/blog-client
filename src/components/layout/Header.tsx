@@ -39,9 +39,6 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, sidebarOpen }) => {
   const { user, isAuthenticated, logout } = useAuth();
   const { mode, toggleTheme } = useAppTheme();
   
-  // Debug logging
-  console.log('Header render - isAuthenticated:', isAuthenticated, 'user:', user);
-  
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [loginModalOpen, setLoginModalOpen] = useState<boolean>(false);
   const userMenuOpen = Boolean(anchorEl);
@@ -230,10 +227,10 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, sidebarOpen }) => {
                 onClick={handleUserMenuClick}
                 sx={{ ml: 1 }}
                 color="inherit"
-                title={`Logged in as ${user.name || user.username}`}
+                title={`Logged in as ${user.display_name || user.username}`}
               >
                 <Avatar sx={{ width: 32, height: 32 }}>
-                  {user.name ? user.name.charAt(0).toUpperCase() : user.username.charAt(0).toUpperCase()}
+                  {user.display_name ? user.display_name.charAt(0).toUpperCase() : user.username.charAt(0).toUpperCase()}
                 </Avatar>
               </IconButton>
               <Menu
@@ -251,7 +248,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick, sidebarOpen }) => {
               >
                 <MenuItem disabled>
                   <Typography variant="body2" color="text.secondary">
-                    {user.name || user.username}
+                    {user.display_name || user.username}
                   </Typography>
                 </MenuItem>
                 <MenuItem onClick={handleLogout}>

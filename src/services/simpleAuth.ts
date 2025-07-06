@@ -202,7 +202,6 @@ export const simpleAuthRefresh = async (): Promise<string | null> => {
  */
 export const getSimpleAuthToken = (): string | null => {
   const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
-  console.log('🗝️ getSimpleAuthToken:', token ? 'Token found in localStorage' : 'No token in localStorage');
   return token;
 };
 

@@ -21,16 +21,9 @@ const Home = () => {
     const fetchPosts = async () => {
       // Don't fetch posts while auth is still loading
       if (authLoading) {
-        console.log('⏳ Waiting for auth to initialize before fetching posts...');
         return;
       }
 
-      console.log('🏠 Home: Fetching posts...', {
-        isAuthenticated,
-        authLoading,
-        currentPage,
-        includeDrafts: isAuthenticated
-      });
 
       setIsLoading(true);
       setError(null);
