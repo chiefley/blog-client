@@ -1,5 +1,5 @@
 // src/services/wordpressApi.ts
-import { WordPressPost, Category, Comment, CommentData, SiteInfo } from '../types/interfaces';
+import { WordPressPost, Category, Tag, Comment, CommentData, SiteInfo } from '../types/interfaces';
 import { getCurrentBlogPath } from '../config/multisiteConfig';
 import { createAuthHeader } from '../contexts/SimpleAuthContext';
 
@@ -797,6 +797,95 @@ export const getTags = async (): Promise<any[]> => {
   } catch (error) {
     console.error('Error fetching tags:', error);
     return [];
+  }
+};
+
+/**
+ * Get a tag by its slug
+ */
+export const getTagBySlug = async (slug: string): Promise<Tag | null> => {
+  const apiUrl = getApiUrl();
+  const requestUrl = `${apiUrl}/tags?slug=${slug}`;
+
+  try {
+    // Tags are public - don't include auth headers
+    const requestOptions = createRequestOptions(false);
+    const response = await fetch(requestUrl, requestOptions);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch tag: ${response.status}`);
+    }
+    
+    const tags = await response.json();
+    return tags.length > 0 ? tags[0] : null;
+  } catch (error) {
+    console.error('Error fetching tag by slug:', error);
+    return null;
+  }
+};
+
+/**
+ * Get posts by tag with support for draft posts when authenticated
+ */
+export const getPostsByTag = async (
+  tagId: number,
+  page = 1,
+  perPage = 10,
+  includeDrafts = false
+): Promise<{ posts: WordPressPost[]; totalPages: number }> => {
+  const apiUrl = getApiUrl();
+  let allPosts: WordPressPost[] = [];
+  let totalPages = 1;
+
+  try {
+    // Check if we should include auth headers
+    const includeAuth = includeDrafts && isAuthenticated();
+    const requestOptions = createRequestOptions(includeAuth);
+
+    // Fetch published posts
+    const publishedUrl = `${apiUrl}/posts?tags=${tagId}&_embed=true&page=${page}&per_page=${perPage}&status=publish`;
+    const publishedResponse = await fetch(publishedUrl, requestOptions);
+    
+    if (publishedResponse.ok) {
+      const publishedPosts = await publishedResponse.json();
+      allPosts = [...publishedPosts];
+      totalPages = parseInt(publishedResponse.headers.get('X-WP-TotalPages') || '1', 10);
+    }
+
+    // If authenticated and including drafts, fetch draft posts
+    if (includeAuth && includeDrafts) {
+      const draftUrl = `${apiUrl}/posts?tags=${tagId}&_embed=true&page=${page}&per_page=${perPage}&status=draft`;
+      
+      try {
+        const draftResponse = await fetch(draftUrl, requestOptions);
+        
+        if (draftResponse.ok) {
+          const draftPosts = await draftResponse.json();
+          
+          // Combine and sort by date
+          allPosts = [...allPosts, ...draftPosts].sort((a, b) => 
+            new Date(b.date).getTime() - new Date(a.date).getTime()
+          );
+          
+          // Paginate combined results
+          const startIndex = 0;
+          const endIndex = perPage;
+          allPosts = allPosts.slice(startIndex, endIndex);
+          
+          // Recalculate total pages
+          const totalDraftPages = parseInt(draftResponse.headers.get('X-WP-TotalPages') || '0', 10);
+          totalPages = Math.max(totalPages, totalDraftPages);
+        }
+      } catch (draftError) {
+        // If draft fetch fails, continue with published posts only
+        console.error('Error fetching draft posts:', draftError);
+      }
+    }
+
+    return { posts: allPosts, totalPages };
+  } catch (error) {
+    console.error('Error fetching posts by tag:', error);
+    return { posts: [], totalPages: 0 };
   }
 };
 

@@ -9,8 +9,8 @@ import {
 } from '@mui/material';
 import PostList from '../components/posts/PostList';
 import { WordPressPost } from '../types/interfaces';
-import { getApiUrl } from '../services/wordpressApi';
-import { useAuth, createAuthHeader } from '../contexts/SimpleAuthContext';
+import { getTagBySlug, getPostsByTag } from '../services/wordpressApi';
+import { useAuth } from '../contexts/SimpleAuthContext';
 
 const TagPosts = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -31,96 +31,27 @@ const TagPosts = () => {
       }
 
       try {
-        // Use the getApiUrl function to get the correct base URL for the current blog
-        const apiUrl = getApiUrl();
-        
-        // Create request options with auth headers if available
-        const requestOptions: RequestInit = {
-          headers: {
-            'Content-Type': 'application/json',
-            ...createAuthHeader()
-          }
-        };
-
         // First get tag information
-        const tagResponse = await fetch(`${apiUrl}/tags?slug=${slug}`, requestOptions);
+        const tag = await getTagBySlug(slug);
         
-        if (!tagResponse.ok) {
-          throw new Error(`Error fetching tag info: ${tagResponse.status}`);
-        }
-        
-        const tagData = await tagResponse.json();
-        
-        if (tagData.length === 0) {
+        if (!tag) {
           setError(`Tag "${slug}" not found.`);
           setLoading(false);
           return;
         }
         
-        const tagId = tagData[0].id;
-        setTagName(tagData[0].name);
+        setTagName(tag.name);
         
-        // Fetch posts with this tag
-        let allPosts: WordPressPost[] = [];
-        let totalPagesCount = 1;
+        // Fetch posts with this tag using the centralized API function
+        const { posts: allPosts, totalPages: totalPagesCount } = await getPostsByTag(
+          tag.id,
+          currentPage,
+          10,
+          isAuthenticated  // This will include auth headers when needed
+        );
         
-        if (isAuthenticated) {
-          console.log('🔍 Fetching published and draft posts with tag');
-          
-          // First get published posts
-          const publishedUrl = `${apiUrl}/posts?tags=${tagId}&_embed=true&page=${currentPage}&per_page=10&status=publish`;
-          const publishedResponse = await fetch(publishedUrl, requestOptions);
-          
-          if (publishedResponse.ok) {
-            const publishedPosts = await publishedResponse.json();
-            allPosts = [...publishedPosts];
-            totalPagesCount = parseInt(publishedResponse.headers.get('X-WP-TotalPages') || '1', 10);
-            console.log(`📖 Fetched ${publishedPosts.length} published posts with tag`);
-          }
-          
-          // Then try to get draft posts
-          const draftUrl = `${apiUrl}/posts?tags=${tagId}&_embed=true&page=${currentPage}&per_page=10&status=draft`;
-          
-          try {
-            const draftResponse = await fetch(draftUrl, requestOptions);
-            if (draftResponse.ok) {
-              const draftPosts = await draftResponse.json();
-              
-              // Ensure draftPosts is an array before spreading
-              if (Array.isArray(draftPosts)) {
-                allPosts = [...allPosts, ...draftPosts];
-                console.log(`📝 Fetched ${draftPosts.length} draft posts with tag`);
-                
-                const draftTotalPages = parseInt(draftResponse.headers.get('X-WP-TotalPages') || '1', 10);
-                totalPagesCount = Math.max(totalPagesCount, draftTotalPages);
-              }
-            } else {
-              console.log(`📝 Could not fetch draft posts (status: ${draftResponse.status})`);
-            }
-          } catch (error) {
-            console.error('Error fetching draft posts:', error);
-          }
-          
-          // Sort combined posts by date
-          allPosts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-          
-          setPosts(allPosts);
-          setTotalPages(totalPagesCount);
-        } else {
-          // Just fetch published posts
-          const postsUrl = `${apiUrl}/posts?tags=${tagId}&_embed=true&page=${currentPage}&per_page=10&status=publish`;
-          const postsResponse = await fetch(postsUrl, requestOptions);
-          
-          if (!postsResponse.ok && postsResponse.status !== 400) {
-            throw new Error(`Error fetching posts: ${postsResponse.status}`);
-          }
-          
-          const totalPagesHeader = postsResponse.headers.get('X-WP-TotalPages');
-          setTotalPages(totalPagesHeader ? parseInt(totalPagesHeader) : 1);
-          
-          const postsData = await postsResponse.json();
-          setPosts(postsData);
-        }
+        setPosts(allPosts);
+        setTotalPages(totalPagesCount);
         setLoading(false);
       } catch (err) {
         console.error('Error:', err);
