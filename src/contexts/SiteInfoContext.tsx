@@ -38,13 +38,20 @@ const getFallbackSiteInfo = async (): Promise<SiteInfo> => {
       const blogConfig = Object.values(blogs).find(b => b.wpPath === blogPath);
       if (blogConfig) {
         blogName = blogConfig.name;
-        console.log(`Using multisite config for blog: ${blogName}`);
+        // Use the description from config if available
+        if (blogConfig.description) {
+          blogDescription = blogConfig.description;
+        }
       }
     }
     
     // Try fetching the site's HTML directly
     try {
-      const response = await fetch(siteUrl);
+      // For multisite, we need to fetch from the WordPress blog URL, not the React app URL
+      const wpBaseUrl = import.meta.env.VITE_WP_API_BASE_URL || 'https://wpcms.thechief.com';
+      const fetchUrl = blogPath ? `${wpBaseUrl}/${blogPath}` : wpBaseUrl;
+      
+      const response = await fetch(fetchUrl);
       if (response.ok) {
         const html = await response.text();
         
@@ -64,7 +71,7 @@ const getFallbackSiteInfo = async (): Promise<SiteInfo> => {
         }
       }
     } catch (e) {
-      console.log('Could not fetch site HTML for fallback info:', e);
+      // Silently fail - we have defaults from config
     }
   } catch (e) {
     console.error('Error in fallback site info method:', e);
@@ -119,7 +126,6 @@ export const SiteInfoProvider: React.FC<SiteInfoProviderProps> = ({ children }) 
       
       try {
         // Try fallback method if API fails
-        console.log('Trying fallback site info method...');
         const fallbackData = await getFallbackSiteInfo();
         setSiteInfo(fallbackData);
       } catch (fallbackErr) {
@@ -137,7 +143,6 @@ export const SiteInfoProvider: React.FC<SiteInfoProviderProps> = ({ children }) 
     
     // Add listener for offline/online events
     const handleOnline = () => {
-      console.log('App is online, refreshing site info');
       fetchSiteInfo();
     };
     

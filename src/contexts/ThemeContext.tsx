@@ -19,10 +19,10 @@ interface ThemeProviderProps {
 }
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
-  // Initialize theme mode from localStorage or default to 'light'
+  // Initialize theme mode from localStorage or default to 'dark'
   const [mode, setMode] = useState<'light' | 'dark'>(() => {
     const savedMode = localStorage.getItem(THEME_STORAGE_KEY);
-    return (savedMode === 'dark' || savedMode === 'light') ? savedMode : 'light';
+    return (savedMode === 'dark' || savedMode === 'light') ? savedMode : 'dark';
   });
 
   // Get the current blog configuration to use blog-specific colors
