@@ -1,28 +1,48 @@
 # Deployment Strategy
 
 ## Overview
-Multi-target deployment system for React app to WordPress subdirectories with automated FTP uploads.
+Multi-target deployment system for React app to WordPress subdirectories using Unix FTP tools (lftp).
 
 ## Deploy Script Architecture
-The `deploy.js` script handles:
-- **Pre-build**: Clean dist directory
+The `deploy-unix.js` script handles:
+- **Clean**: Remove dist directory
 - **Build**: Vite production build with relative paths
-- **Post-build**: Copy .htaccess, fix paths
-- **Deploy**: FTP upload to target sites
+- **Post-build**: Copy .htaccess from public directory
+- **Deploy**: FTP upload to target sites using lftp
+
+## Prerequisites
+- Unix/Linux environment (or WSL on Windows)
+- lftp installed:
+  ```bash
+  # Ubuntu/Debian/WSL
+  sudo apt-get install lftp
+  
+  # macOS
+  brew install lftp
+  ```
 
 ## Environment Configuration
 ```bash
 # .env file structure
 FTP_HOST=your-ftp-host.com
-FTP_USER=your-username
-FTP_PASSWORD=your-password
-FTP_WA1X_PATH=/public_html/react-app
-FTP_APPLEFINCH_PATH=/public_html/react-app
+
+# WA1X site credentials
+FTP_USER_WA1X=u598898806.wa1x.thechief.com
+FTP_PASS_WA1X=your-password
+FTP_WA1X_PATH=/public_html
+
+# AppleFinch site credentials
+FTP_USER_APPLEFINCH=u598898806.applefinch.thechief.com
+FTP_PASS_APPLEFINCH=your-password
+FTP_APPLEFINCH_PATH=/public_html
 ```
 
 ## Deployment Commands
 ```bash
-# Build only
+# Clean dist directory
+npm run clean
+
+# Build only (includes clean)
 npm run build
 
 # Deploy to specific site
@@ -31,6 +51,7 @@ npm run deploy:applefinch
 
 # Deploy to all sites
 npm run deploy:all
+npm run deploy
 
 # Build + Deploy combined
 npm run full:wa1x
@@ -107,10 +128,18 @@ build: {
 ## Deployment Process Flow
 1. **Clean**: Remove old dist files
 2. **Build**: TypeScript compile + Vite bundle
-3. **Post-process**: Copy .htaccess, ensure relative paths
-4. **Connect**: Establish FTP connection
-5. **Upload**: Transfer dist/* to remote path
+3. **Post-process**: Copy .htaccess from public directory
+4. **Connect**: Establish FTP connection using lftp
+5. **Upload**: Mirror dist/* to remote path with lftp
 6. **Verify**: Check deployment success
+
+## lftp Deployment Details
+The script uses lftp with the following settings:
+- SSL verification disabled (for compatibility with some hosts)
+- Mirror mode: uploads only changed files
+- Excludes .map files to reduce upload size
+- Verbose output for debugging
+- Parallel transfers for faster deployment
 
 ## Troubleshooting
 

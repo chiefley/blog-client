@@ -59,7 +59,7 @@ npm test                # Run Vitest tests
 ## Deployment Architecture
 - **Subdirectory Deployment**: Deploys to WordPress subdirectories (e.g., `/react-app/`)
 - **Multi-Target Support**: Deploy to wa1x.thechief.com, applefinch.thechief.com, or all sites
-- **Automated Process**: Uses `deploy.js` with FTP via basic-ftp package
+- **Automated Process**: Uses `deploy-unix.js` with lftp for Unix/Linux/WSL environments
 - **Asset Path Handling**: Relative paths (`./`) for subdirectory compatibility
 - **Configuration**: Environment variables in `.env` files (not committed)
 - **Server Config**: `.htaccess` handles SPA routing and caching

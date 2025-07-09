@@ -7,7 +7,8 @@
  * This script builds the React application and deploys it using lftp (Unix/Linux/WSL)
  * 
  * Usage:
- *   node deploy-unix.js build                   # Build only
+ *   node deploy-unix.js clean                   # Clean dist directory
+ *   node deploy-unix.js build                   # Build only (includes clean)
  *   node deploy-unix.js deploy [target]         # Deploy to one or all targets
  *   node deploy-unix.js full [target]           # Full build and deploy
  */
@@ -84,12 +85,42 @@ function checkLftp() {
 }
 
 /**
+ * Clean the dist directory
+ */
+async function cleanDist() {
+  console.log('Cleaning dist directory...');
+  try {
+    if (existsSync(DIST_DIR)) {
+      await fs.rm(DIST_DIR, { recursive: true, force: true });
+    }
+    console.log('✅ Dist directory cleaned!\n');
+    return true;
+  } catch (error) {
+    console.error('❌ Failed to clean dist directory:', error.message);
+    return false;
+  }
+}
+
+/**
  * Build the project
  */
-function buildProject() {
+async function buildProject() {
   console.log('Building project...');
   try {
-    execSync('npm run build', { stdio: 'inherit' });
+    // Clean first
+    await cleanDist();
+    
+    // Run Vite build directly
+    execSync('npx vite build', { stdio: 'inherit' });
+    
+    // Copy .htaccess file from public directory
+    const htaccessSource = path.resolve('./public/.htaccess');
+    const htaccessDest = path.join(DIST_DIR, '.htaccess');
+    if (existsSync(htaccessSource)) {
+      await fs.copyFile(htaccessSource, htaccessDest);
+      console.log('✅ .htaccess file copied to dist directory');
+    }
+    
     console.log('✅ Build completed successfully!\n');
     return true;
   } catch (error) {
@@ -176,7 +207,8 @@ async function main() {
 XBlog Deployment Script - Unix Version
 
 Usage:
-  node deploy-unix.js build                   # Build only
+  node deploy-unix.js clean                   # Clean dist directory
+  node deploy-unix.js build                   # Build only (includes clean)
   node deploy-unix.js deploy [target]         # Deploy to one or all targets
   node deploy-unix.js full [target]           # Full build and deploy
 
@@ -199,8 +231,13 @@ Examples:
 
   // Handle commands
   switch (command) {
+    case 'pre-build':
+    case 'clean':
+      await cleanDist();
+      break;
+      
     case 'build':
-      buildProject();
+      await buildProject();
       break;
 
     case 'deploy':
@@ -226,7 +263,7 @@ Examples:
       break;
 
     case 'full':
-      if (buildProject()) {
+      if (await buildProject()) {
         if (targetName) {
           const target = targets.find(t => t.name === targetName);
           if (!target) {
