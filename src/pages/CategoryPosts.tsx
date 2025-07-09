@@ -11,6 +11,7 @@ import PostList from '../components/posts/PostList';
 import { WordPressPost } from '../types/interfaces';
 import { getPosts, getCategoryBySlug } from '../services/wordpressApi';
 import { useAuth } from '../contexts/SimpleAuthContext';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 const CategoryPosts = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -21,6 +22,9 @@ const CategoryPosts = () => {
   const [categoryName, setCategoryName] = useState('');
   const [totalPages, setTotalPages] = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
+  
+  // Update document title with category name
+  useDocumentTitle(categoryName ? `Category: ${categoryName}` : undefined);
 
   useEffect(() => {
     const fetchCategoryPosts = async () => {

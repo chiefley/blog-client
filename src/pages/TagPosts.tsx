@@ -11,6 +11,7 @@ import PostList from '../components/posts/PostList';
 import { WordPressPost } from '../types/interfaces';
 import { getTagBySlug, getPostsByTag } from '../services/wordpressApi';
 import { useAuth } from '../contexts/SimpleAuthContext';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 const TagPosts = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -21,6 +22,9 @@ const TagPosts = () => {
   const [tagName, setTagName] = useState('');
   const [totalPages, setTotalPages] = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
+  
+  // Update document title with tag name
+  useDocumentTitle(tagName ? `Tag: ${tagName}` : undefined);
 
   useEffect(() => {
     const fetchTagPosts = async () => {

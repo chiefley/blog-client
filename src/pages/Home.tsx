@@ -5,8 +5,11 @@ import FeaturedArticle from '../components/posts/FeaturedArticle';
 import { WordPressPost } from '../types/interfaces';
 import { getPosts } from '../services/wordpressApi';
 import { useAuth } from '../contexts/SimpleAuthContext';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 const Home = () => {
+  // Set document title for home page
+  useDocumentTitle();
   const [posts, setPosts] = useState<WordPressPost[]>([]);
   const [featuredPost, setFeaturedPost] = useState<WordPressPost | null>(null);
   const [isLoading, setIsLoading] = useState(true);

@@ -24,6 +24,7 @@ import { Comments } from '../comments';
 import { ShortcodeRenderer } from '../shortcodes/ShortcodeRenderer';
 import { processFootnotes, footnoteStyles } from '../../utils/footnoteProcessor';
 import { useAuth } from '../../contexts/SimpleAuthContext';
+import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 
 const PostDetail: React.FC = () => {
     const { slug, id } = useParams<{ slug?: string; id?: string }>();
@@ -32,6 +33,9 @@ const PostDetail: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [refreshing, setRefreshing] = useState(false);
     const { isAuthenticated } = useAuth();
+    
+    // Update document title with post title
+    useDocumentTitle(post?.title?.rendered);
 
     // Global footnote click handler
     // IMPORTANT: This handles WordPress native footnote navigation

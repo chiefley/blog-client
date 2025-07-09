@@ -2,8 +2,11 @@ import React, { useState } from 'react';
 import { Container, Typography, Box, Divider, Paper, Alert, FormControlLabel, Switch } from '@mui/material';
 import OptimizedWeaselSimulation from '../components/common/OptimizedWeaselSimulation';
 import PetsIcon from '@mui/icons-material/Pets';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 const GeneticAlgorithmPost: React.FC = () => {
+  // Set document title
+  useDocumentTitle('Understanding Genetic Algorithms with Weasels');
   const [withBadger, setWithBadger] = useState<boolean>(false);
 
   // Handler for the main badger toggle
