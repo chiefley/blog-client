@@ -41,6 +41,12 @@ const CommentList: React.FC<CommentListProps> = ({ postId }) => {
 
   // Function to build hierarchical comments
   const buildCommentHierarchy = (comments: Comment[]): Comment[] => {
+    // Ensure comments is an array
+    if (!Array.isArray(comments)) {
+      console.error('buildCommentHierarchy: comments is not an array', comments);
+      return [];
+    }
+
     const commentMap = new Map<number, Comment>();
     const rootComments: Comment[] = [];
 

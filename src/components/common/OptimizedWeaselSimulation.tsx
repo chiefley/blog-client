@@ -6,7 +6,8 @@ import {
   FormControlLabel, 
   Switch, 
   IconButton,
-  Tooltip
+  Tooltip,
+  useTheme
 } from '@mui/material';
 import { WeaselSimulationOptimizer } from '../../libraries/weasels/weaselOptimizer';
 import SpeedIcon from '@mui/icons-material/Speed';
@@ -36,6 +37,7 @@ const OptimizedWeaselSimulation: React.FC<OptimizedWeaselSimulationProps> = ({
   const [speed, setSpeed] = useState<number>(1.5); // Default to 1.5x speed
   const [withBadger, setWithBadger] = useState<boolean>(initialWithBadger);
   const [showAdvancedControls, setShowAdvancedControls] = useState<boolean>(false);
+  const theme = useTheme();
 
   // Track if the simulation is initialized
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
@@ -69,7 +71,8 @@ const OptimizedWeaselSimulation: React.FC<OptimizedWeaselSimulationProps> = ({
         withBadger,
         {
           speedMultiplier: speed,
-          showFps: false
+          showFps: false,
+          isDarkMode: theme.palette.mode === 'dark'
         }
       );
 
@@ -87,7 +90,7 @@ const OptimizedWeaselSimulation: React.FC<OptimizedWeaselSimulationProps> = ({
         optimizerRef.current.dispose();
       }
     };
-  }, [mutationLevel, initialFoodSources, height]);
+  }, [mutationLevel, initialFoodSources, height]); // Note: theme is handled separately in another effect
 
   // Update speed when it changes
   useEffect(() => {
@@ -95,6 +98,13 @@ const OptimizedWeaselSimulation: React.FC<OptimizedWeaselSimulationProps> = ({
       optimizerRef.current.setSpeedMultiplier(speed);
     }
   }, [speed]);
+
+  // Update theme when it changes
+  useEffect(() => {
+    if (optimizerRef.current) {
+      optimizerRef.current.setDarkMode(theme.palette.mode === 'dark');
+    }
+  }, [theme.palette.mode]);
 
   // Handle badger toggle and reinitialize the simulation
   const handleBadgerChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -120,7 +130,8 @@ const OptimizedWeaselSimulation: React.FC<OptimizedWeaselSimulationProps> = ({
         event.target.checked,
         {
           speedMultiplier: speed,
-          showFps: false
+          showFps: false,
+          isDarkMode: theme.palette.mode === 'dark'
         }
       );
 
@@ -177,8 +188,7 @@ const OptimizedWeaselSimulation: React.FC<OptimizedWeaselSimulationProps> = ({
             height: 'auto',
             border: '1px solid',
             borderColor: 'divider',
-            borderRadius: 1,
-            bgcolor: 'background.default'
+            borderRadius: 1
           },
           '& .controls': {
             display: 'flex',
@@ -287,14 +297,16 @@ const OptimizedWeaselSimulation: React.FC<OptimizedWeaselSimulationProps> = ({
 
           {/* Settings toggle for future expansion */}
           <Tooltip title="Advanced Settings (Coming Soon)">
-            <IconButton 
-              size="small"
-              onClick={() => { setShowAdvancedControls(!showAdvancedControls); }}
-              disabled
-              sx={{ opacity: 0.5 }}
-            >
-              <SettingsIcon fontSize="small" />
-            </IconButton>
+            <span>
+              <IconButton 
+                size="small"
+                onClick={() => { setShowAdvancedControls(!showAdvancedControls); }}
+                disabled
+                sx={{ opacity: 0.5 }}
+              >
+                <SettingsIcon fontSize="small" />
+              </IconButton>
+            </span>
           </Tooltip>
         </Box>
       )}

@@ -14,14 +14,15 @@ export class WeaselSimulationOptimizer {
     withBadger: boolean,
     private options: {
       speedMultiplier?: number,
-      showFps?: boolean
+      showFps?: boolean,
+      isDarkMode?: boolean
     } = {}
   ) {
     // Set default options
     this.options.speedMultiplier = this.options.speedMultiplier || 1;
 
     // Initialize the view model
-    this.vm = new SWeaselVm(container, mutationLevel, withBadger);
+    this.vm = new SWeaselVm(container, mutationLevel, withBadger, this.options.isDarkMode || false);
 
     // Replace the run button event to use our optimized cycle
     this.replaceRunButtonHandler();
@@ -174,5 +175,11 @@ export class WeaselSimulationOptimizer {
   // Clean up resources
   public dispose(): void {
     this.stopOptimizedCycle();
+  }
+
+  // Public method to update theme
+  public setDarkMode(isDarkMode: boolean): void {
+    this.options.isDarkMode = isDarkMode;
+    this.vm.setDarkMode(isDarkMode);
   }
 }

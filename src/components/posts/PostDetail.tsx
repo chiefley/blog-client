@@ -22,9 +22,10 @@ import LazyImage from '../common/LazyImage';
 import { getResponsiveImageUrl } from '../../utils/imageUtils';
 import { Comments } from '../comments';
 import { ShortcodeRenderer } from '../shortcodes/ShortcodeRenderer';
-import { processFootnotes, footnoteStyles } from '../../utils/footnoteProcessor';
+import { processFootnotes, getFootnoteStyles } from '../../utils/footnoteProcessor';
 import { useAuth } from '../../contexts/SimpleAuthContext';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
+import { useTheme } from '@mui/material/styles';
 
 const PostDetail: React.FC = () => {
     const { slug, id } = useParams<{ slug?: string; id?: string }>();
@@ -33,6 +34,7 @@ const PostDetail: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [refreshing, setRefreshing] = useState(false);
     const { isAuthenticated } = useAuth();
+    const theme = useTheme();
     
     // Update document title with post title
     useDocumentTitle(post?.title?.rendered);
@@ -241,7 +243,7 @@ const PostDetail: React.FC = () => {
         <Box>
             {/* Add footnote styles */}
             {hasFootnotes && (
-                <style dangerouslySetInnerHTML={{ __html: footnoteStyles }} />
+                <style dangerouslySetInnerHTML={{ __html: getFootnoteStyles(theme.palette.mode === 'dark') }} />
             )}
             
             <Button

@@ -10,6 +10,7 @@ export class SWeaselVm {
   private _generations = 0;
   private _scaleX = 1;
   private _scaleY = 1;
+  private _isDarkMode = false;
 
   private _field: HTMLCanvasElement;
   private _txtNumSources: HTMLInputElement;
@@ -25,7 +26,8 @@ export class SWeaselVm {
 
   private _allBtnStops: HTMLCollectionOf<HTMLButtonElement>;
 
-  constructor(containerElem: HTMLElement, private mutationLevel: number, private withBadger: boolean) {
+  constructor(containerElem: HTMLElement, private mutationLevel: number, private withBadger: boolean, isDarkMode = false) {
+    this._isDarkMode = isDarkMode;
     // Get UI elements
     this._field = containerElem.querySelector(".field")!;
     this._txtNumSources = containerElem.querySelector(".txtNumSources")!;
@@ -186,8 +188,17 @@ export class SWeaselVm {
   };
 
   private clearFieldPrivate = (): void => {
-    // Clear the entire canvas using the full coordinate space
-    this._context.clearRect(0, 0, 1000, 1000);
+    // Save the current transformation matrix
+    this._context.save();
+    
+    // Reset transformation to clear the entire canvas
+    this._context.setTransform(1, 0, 0, 1, 0, 0);
+    
+    // Clear the entire canvas
+    this._context.clearRect(0, 0, this._field.width, this._field.height);
+    
+    // Restore the transformation matrix
+    this._context.restore();
   };
 
   private DrawSources = (): void => {
@@ -206,9 +217,10 @@ export class SWeaselVm {
   private DrawCorners = (): void => {
     if (!this._world) return;
 
+    const lineColor = this._isDarkMode ? 'rgba(255, 255, 255, 0.87)' : 'black';
     this._context.lineWidth = 2;
-    this._context.strokeStyle = "black";
-    this._context.fillStyle = "black";
+    this._context.strokeStyle = lineColor;
+    this._context.fillStyle = lineColor;
     for (const c of this._world.stops()) {
       this._context.beginPath();
       this._context.arc(c.x, c.y, 5, 0, 2 * Math.PI, false);
@@ -219,8 +231,9 @@ export class SWeaselVm {
   private DrawPaths = (): void => {
     if (!this._world) return;
 
+    const lineColor = this._isDarkMode ? 'rgba(255, 255, 255, 0.87)' : 'black';
     this._context.lineWidth = 1;
-    this._context.strokeStyle = "black";
+    this._context.strokeStyle = lineColor;
     for (const l of this._world.paths()) {
       this._context.beginPath();
       this._context.moveTo(l.start.x, l.start.y);
@@ -276,5 +289,15 @@ export class SWeaselVm {
 
   public DisplayValues(): void {
     this.displayValuesPrivate();
+  }
+
+  // Public method to update theme
+  public setDarkMode(isDarkMode: boolean): void {
+    this._isDarkMode = isDarkMode;
+    // Redraw if initialized
+    if (this._initialized) {
+      this.clearFieldPrivate();
+      this.drawAllPrivate();
+    }
   }
 }

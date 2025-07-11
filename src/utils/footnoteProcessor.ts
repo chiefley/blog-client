@@ -151,9 +151,10 @@ export function extractFootnotesSection(html: string): {
 }
 
 /**
- * Add CSS for properly styled footnotes
+ * Generate CSS for properly styled footnotes based on theme
+ * @param isDarkMode - Whether the current theme is dark mode
  */
-export const footnoteStyles = `
+export const getFootnoteStyles = (isDarkMode: boolean) => `
   .footnotes-container {
     margin-top: 3rem;
   }
@@ -162,25 +163,13 @@ export const footnoteStyles = `
     font-size: 1.5rem;
     font-weight: 500;
     margin-bottom: 1rem;
-    color: rgba(0, 0, 0, 0.87);
-  }
-
-  @media (prefers-color-scheme: dark) {
-    .footnotes-heading {
-      color: rgba(255, 255, 255, 0.87);
-    }
+    color: ${isDarkMode ? 'rgba(255, 255, 255, 0.87)' : 'rgba(0, 0, 0, 0.87)'};
   }
 
   .footnotes-divider {
     height: 1px;
-    background-color: rgba(0, 0, 0, 0.12);
+    background-color: ${isDarkMode ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)'};
     margin-bottom: 1.5rem;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    .footnotes-divider {
-      background-color: rgba(255, 255, 255, 0.12);
-    }
   }
 
   .processed-footnotes {
