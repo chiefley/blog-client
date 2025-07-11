@@ -155,7 +155,7 @@ const PostDetail: React.FC = () => {
         );
     }
 
-    if (error || !post) {
+    if (error || !post || typeof post !== 'object') {
         return (
             <Box>
                 <Button
@@ -173,19 +173,19 @@ const PostDetail: React.FC = () => {
         );
     }
 
-    // Extract post data
-    const title = post.title.rendered;
-    const rawContent = post.content.rendered;
+    // Extract post data with null checks
+    const title = post.title?.rendered || 'Untitled';
+    const rawContent = post.content?.rendered || '';
     
     // Process footnotes in the content
     // This removes WordPress's inline onclick handlers and prepares the HTML
     // for React-based smooth scrolling. WordPress footnotes come pre-rendered.
     const { content, hasFootnotes } = processFootnotes(rawContent);
-    const date = new Date(post.date).toLocaleDateString('en-US', {
+    const date = post.date ? new Date(post.date).toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'long',
         day: 'numeric'
-    });
+    }) : 'Date not available';
 
     // Get categories and tags - with more robust handling
     const categories = post._embedded?.['wp:term']?.[0] || [];

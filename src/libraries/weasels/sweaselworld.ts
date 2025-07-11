@@ -62,6 +62,9 @@ export class SWeaselWorld {
       child.copyIn(this.fittestWeasel);
       this._children.push(child);
     }
+    
+    // Invalidate cache to ensure initial values are calculated
+    this._lastFitnessWeasel = null;
   };
 
   public stops = (): Point[] => this.fittestWeasel.stops();
@@ -127,39 +130,31 @@ export class SWeaselWorld {
   };
 
   public parentSpentCalories = (): number => {
-    // Use cached value if available
-    if (this._lastFitnessWeasel === this.fittestWeasel) {
-      return Math.floor(this._lastSpentCalories);
+    // Recalculate when cache is invalidated
+    if (this._lastFitnessWeasel === null) {
+      this.recalculateFitness();
     }
 
-    const spent = this.caloriesSpentWalking(this.fittestWeasel);
-
-    // Cache the result
-    if (this._lastFitnessWeasel !== this.fittestWeasel) {
-      this._lastFitnessWeasel = this.fittestWeasel;
-      this._lastSpentCalories = spent;
-      // We'll calculate acquired calories on demand
-    }
-
-    return Math.floor(spent);
+    return Math.floor(this._lastSpentCalories);
   };
 
   public parentAcquiredCalories = (): number => {
-    // Use cached value if available
-    if (this._lastFitnessWeasel === this.fittestWeasel) {
-      return Math.floor(this._lastAcquiredCalories);
+    // Recalculate when cache is invalidated
+    if (this._lastFitnessWeasel === null) {
+      this.recalculateFitness();
     }
 
+    return Math.floor(this._lastAcquiredCalories);
+  };
+
+  private recalculateFitness = (): void => {
+    // Calculate both values once and cache them
+    const spent = this.caloriesSpentWalking(this.fittestWeasel);
     const acquired = this.caloriesAcquired(this.fittestWeasel);
-
-    // Cache the result
-    if (this._lastFitnessWeasel !== this.fittestWeasel) {
-      this._lastFitnessWeasel = this.fittestWeasel;
-      this._lastAcquiredCalories = acquired;
-      // We'll calculate spent calories on demand
-    }
-
-    return Math.floor(acquired);
+    
+    this._lastSpentCalories = spent;
+    this._lastAcquiredCalories = acquired;
+    this._lastFitnessWeasel = this.fittestWeasel;
   };
 
   private netCalories = (weas: SWeasel): number => {
