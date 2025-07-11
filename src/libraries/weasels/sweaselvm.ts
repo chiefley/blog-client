@@ -60,8 +60,10 @@ export class SWeaselVm {
     this._btnEarthquake.onclick = () => { this.btnEarthquakeClick(); };
     this._btnSingleStep.onclick = () => { this.btnSingleStepClick(); };
 
-    // Set initial source count
-    this._txtNumSources.value = "25";
+    // Set initial source count only if not already set
+    if (!this._txtNumSources.value) {
+      this._txtNumSources.value = "25";
+    }
 
     // Initialize state
     this._running = false;

@@ -23,6 +23,7 @@ import { getResponsiveImageUrl } from '../../utils/imageUtils';
 import { Comments } from '../comments';
 import { ShortcodeRenderer } from '../shortcodes/ShortcodeRenderer';
 import { processFootnotes, getFootnoteStyles } from '../../utils/footnoteProcessor';
+import { decodeShortcodeEntities } from '../../utils/htmlEntityDecoder';
 import { useAuth } from '../../contexts/SimpleAuthContext';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { useTheme } from '@mui/material/styles';
@@ -177,10 +178,15 @@ const PostDetail: React.FC = () => {
     const title = post.title?.rendered || 'Untitled';
     const rawContent = post.content?.rendered || '';
     
+    // Decode HTML entities in shortcodes before processing
+    // WordPress REST API returns content with encoded entities (&quot; etc.)
+    // which need to be decoded for the shortcode parser to work correctly
+    const decodedContent = decodeShortcodeEntities(rawContent);
+    
     // Process footnotes in the content
     // This removes WordPress's inline onclick handlers and prepares the HTML
     // for React-based smooth scrolling. WordPress footnotes come pre-rendered.
-    const { content, hasFootnotes } = processFootnotes(rawContent);
+    const { content, hasFootnotes } = processFootnotes(decodedContent);
     const date = post.date ? new Date(post.date).toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'long',

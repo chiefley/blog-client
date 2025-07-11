@@ -32,13 +32,29 @@ export interface ShortcodeComponentProps {
   children?: React.ReactNode;
 }
 
+// Import the kebabToCamel function from shortcodeParser
+import { kebabToCamel } from '../../utils/shortcodeParser';
+
+// Helper function to transform kebab-case attributes to camelCase
+const transformAttributes = (attributes: Record<string, any> = {}): Record<string, any> => {
+  const transformed: Record<string, any> = {};
+  Object.entries(attributes).forEach(([key, value]) => {
+    transformed[kebabToCamel(key)] = value;
+  });
+  return transformed;
+};
+
 // Wrapper components for simulations to match ShortcodeComponentProps interface
 const WeaselSimulationWrapper: React.FC<ShortcodeComponentProps> = ({ attributes }) => {
-  return <OptimizedWeaselSimulation {...(attributes || {})} />;
+  // Transform kebab-case attributes to camelCase for React props
+  const transformedAttributes = transformAttributes(attributes);
+  return <OptimizedWeaselSimulation {...transformedAttributes} />;
 };
 
 const DawkinsWeaselWrapper: React.FC<ShortcodeComponentProps> = ({ attributes }) => {
-  return <DawkinsWeaselSimulation {...(attributes || {})} />;
+  // Transform kebab-case attributes to camelCase for React props
+  const transformedAttributes = transformAttributes(attributes);
+  return <DawkinsWeaselSimulation {...transformedAttributes} />;
 };
 
 // Registry mapping shortcode names to React components

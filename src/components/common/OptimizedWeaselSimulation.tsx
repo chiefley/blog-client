@@ -46,7 +46,7 @@ const OptimizedWeaselSimulation: React.FC<OptimizedWeaselSimulationProps> = ({
   useEffect(() => {
     if (containerRef.current) {
       // Create the necessary HTML structure first
-      containerRef.current.innerHTML = `
+      const htmlContent = `
         <div class="stats">
           <div>Generations: <span class="lblGenerations">0</span></div>
           <div>Calories Spent: <span class="lblSpentCalories">0</span></div>
@@ -63,6 +63,7 @@ const OptimizedWeaselSimulation: React.FC<OptimizedWeaselSimulationProps> = ({
           <button class="btnEarthquake">Earthquake</button>
         </div>
       `;
+      containerRef.current.innerHTML = htmlContent;
 
       // Initialize the simulation with our optimizer
       optimizerRef.current = new WeaselSimulationOptimizer(
